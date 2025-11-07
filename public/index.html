@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Confirmación - Generador Comprobante con QR</title>
+
+  <!-- Librerías -->
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+  <style>
+    :root{
+      --bg:#fafafa; --card:#fff; --accent:#f2b600; --muted:#666;
+      --primary:#111;
+    }
+    *{box-sizing:border-box}
+    body{font-family:Arial, Helvetica, sans-serif;background:var(--bg);margin:0;padding:16px;color:var(--primary)}
+    .wrap{max-width:1000px;margin:0 auto}
+    header{background:#111;color:white;padding:14px 18px;border-radius:6px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+    header .logo{width:46px;height:46px;border-radius:6px;background:linear-gradient(135deg,#f2b600,#ffa858);display:flex;align-items:center;justify-content:center;font-weight:700;color:#111}
+    h1{margin:18px 0 8px;font-weight:600;font-size:20px}
+    .grid{display:grid;grid-template-columns:1fr 420px;gap:20px;align-items:start}
+    .card{background:var(--card);padding:18px;border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,0.06)}
+    label{display:block;font-size:14px;margin-bottom:6px;color:#222}
+    input, textarea{
+      width:100%;padding:12px;border-radius:6px;border:1px solid #e6e6e9;background:#fff;font-size:15px
+    }
+    .row{display:flex;gap:10px;flex-wrap:wrap}
+    .row > *{flex:1}
+    .btn{display:inline-block;padding:12px 18px;border-radius:6px;border:0;cursor:pointer;background:var(--accent);color:#111;font-weight:700;font-size:15px}
+    .btn.secondary{background:#6c6f74;color:white}
+    .muted{color:var(--muted);font-size:13px}
+    .center{text-align:center}
+    .form-section{display:none}
+    .visible{display:block}
+
+    /* PREVIEW / COMPROBANTE */
+    #comprobante{
+      width:100%; max-width:800px; margin:0 auto; background:white; padding:16px; border:1px solid #ddd;
+      font-family: 'Arial'; color:#111;
+    }
+    #comprobante .top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;border-bottom:1px solid #ddd;padding-bottom:12px;margin-bottom:12px;gap:10px}
+    #comprobante .brand{display:flex;align-items:center;gap:12px}
+    #comprobante .brand .logo{width:60px;height:60px;border-radius:6px;background:linear-gradient(135deg,#f2b600,#e68b00);display:flex;align-items:center;justify-content:center;font-weight:700;color:#111}
+    #comprobante h2{margin:0;font-size:16px}
+    #comprobante .titulo{text-align:center;font-weight:800;font-size:18px;color:#222;margin:8px 0}
+    .registro{display:flex;flex-wrap:wrap;gap:18px;align-items:flex-start}
+    .datos{flex:1;min-width:220px}
+    .datos table{width:100%;border-collapse:collapse}
+    .datos td{padding:6px 4px;font-size:13px;word-break:break-word}
+    .label{width:120px;font-weight:700;color:#333;text-align:left}
+    .cuiGrande{font-size:22px;color:#c62a2a;font-weight:800;text-align:center;margin-bottom:6px}
+    .qrBox{width:100%;max-width:200px;text-align:center;margin:auto}
+    .nota{font-size:12px;color:#444;margin-top:12px;line-height:1.2}
+    footer.note{margin-top:18px;font-size:12px;color:#333}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="logo"><img src="escudoSoledad.png" alt="" class="logo"></div>
+      <div>
+        <div style="font-weight:700">Plataforma - Confirmación de información de devoto</div>
+        <div style="font-size:12px;color:#cfcfcf">Sistema de actualización / comprobante con QR</div>
+      </div>
+    </header>
+
+    <div style="height:18px"></div>
+
+    <div class="grid">
+      <!-- Paso 1 -->
+      <div>
+        <div id="step1" class="card visible">
+          <h1>CONFIRMACIÓN DE INFORMACIÓN DE DEVOTO</h1>
+          <div class="instructions muted">
+            <p><strong>Instrucciones</strong></p>
+            <ul>
+              <li>Ingrese los 13 dígitos de su número de DPI o CUI y haga clic en <strong>CONSULTAR INFORMACIÓN</strong>.</li>
+            </ul>
+          </div>
+          <label><input type="checkbox" id="noGuate"> <span class="muted">No soy de Guatemala</span></label>
+          <label>Documento de Identificación *</label>
+          <input id="cuiInput" type="text" placeholder="Ej: 3059567870301" inputmode="numeric" maxlength="13">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;">
+            <div class="muted">Los campos con * son obligatorios.</div>
+            <button id="consultBtn" class="btn">CONSULTAR INFORMACIÓN</button>
+          </div>
+        </div>
+
+        <!-- Paso 2 -->
+        <div id="step2" class="card form-section">
+          <h1>Registro / Actualización de Devoto</h1>
+          <form id="devotoForm">
+            <div class="row">
+              <div><label>Nombres *</label><input id="nombres" type="text" required></div>
+              <div><label>Apellidos *</label><input id="apellidos" type="text" required></div>
+            </div>
+
+            <div class="row">
+              <div><label>CUI / DPI *</label><input id="cuiForm" type="text" readonly></div>
+              <div><label>Teléfono</label><input id="telefono" type="tel"></div>
+            </div>
+
+            <label>Correo electrónico *</label><input id="correo" type="email" required placeholder="ejemplo@correo.com">
+            <label>Sexo</label><label style="margin-left:10px"><input type="radio" name="sexo" value="Mujer"> Mujer</label>
+            <label>Dirección</label><input id="direccion" type="text" placeholder="Ciudad, Calle, etc.">
+            <label>Fecha de nacimiento</label><input id="fn" type="date">
+            <label>Hermandad Virgen de la Soledad</label><textarea id="nota" rows="3" placeholder="Observaciones..."></textarea>
+
+            <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px;">
+              <button type="button" id="backBtn" class="btn secondary">Volver</button>
+              <button type="submit" class="btn">Generar comprobante (PDF)</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Vista previa -->
+      <div>
+        <div class="card center">
+          <h3>Vista previa / QR</h3>
+          <img id="previewQr" src="" style="width:220px;height:220px;border:1px solid #eee;padding:10px;background:white">
+          <div id="previewText" class="muted">Aquí se mostrará el contenido del QR cuando generes el comprobante.</div>
+          <button id="downloadQrBtn" class="btn secondary" style="padding:8px 10px;margin-top:8px;">Descargar QR</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Comprobante -->
+    <div id="comprobanteContainer" style="display:none; padding-top:18px;">
+      <div id="comprobante">
+        <div class="top">
+          <div class="brand">
+            <div class="logo"><img src="escudoSoledad.png" alt="" class="logo"></div>
+            <div>
+              <div style="font-weight:700;color:#b8860b">HERMANDAD VIRGEN DE LA SOLEDAD</div>
+              <div style="font-size:12px;color:#777">Identificación Devoto</div>
+            </div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:12px;color:#777">DOCUMENTO</div>
+            <div id="fechaComprobante" style="font-weight:700"></div>
+          </div>
+        </div>
+
+        <div class="titulo">REGISTRO DEVOTO</div>
+        <div class="cuiGrande" id="cuiGrande"></div>
+
+        <div class="registro">
+          <div class="datos">
+            <table>
+              <tr><td class="label">CUI</td><td id="tdCui"></td></tr>
+              <tr><td class="label">Nombres</td><td id="tdNombres"></td></tr>
+              <tr><td class="label">Apellidos</td><td id="tdApellidos"></td></tr>
+              <tr><td class="label">Fecha Nacimiento</td><td id="tdFn"></td></tr>
+              <tr><td class="label">Teléfono</td><td id="tdTel"></td></tr>
+              <tr><td class="label">Correo</td><td id="tdCorreo"></td></tr>
+              <tr><td class="label">Dirección</td><td id="tdDir"></td></tr>
+            </table>
+          </div>
+          <div class="qrBox">
+            <img id="qrComprobante" src="" style="width:160px;height:160px;border:1px solid #ddd;padding:6px;background:white">
+            <div><strong>Contraseña:</strong> <span id="contraseñaPdf" style="font-weight:700"></span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCRIPT -->
+  <script>
+  const { jsPDF } = window.jspdf;
+  const API_URL = "http://localhost:3000/api";
+
+  const step1=document.getElementById('step1'),step2=document.getElementById('step2');
+  const consultBtn=document.getElementById('consultBtn'),backBtn=document.getElementById('backBtn');
+  const cuiInput=document.getElementById('cuiInput'),noGuate=document.getElementById('noGuate');
+  const devotoForm=document.getElementById('devotoForm');
+  const nombresEl=document.getElementById('nombres'),apellidosEl=document.getElementById('apellidos'),
+  cuiForm=document.getElementById('cuiForm'),telefonoEl=document.getElementById('telefono'),
+  correoEl=document.getElementById('correo'),direccionEl=document.getElementById('direccion'),
+  fnEl=document.getElementById('fn'),notaEl=document.getElementById('nota');
+  const previewQr=document.getElementById('previewQr'),previewText=document.getElementById('previewText'),downloadQrBtn=document.getElementById('downloadQrBtn');
+  const tdCui=document.getElementById('tdCui'),tdNombres=document.getElementById('tdNombres'),tdApellidos=document.getElementById('tdApellidos'),
+  tdFn=document.getElementById('tdFn'),tdTel=document.getElementById('tdTel'),tdCorreo=document.getElementById('tdCorreo'),tdDir=document.getElementById('tdDir');
+  const cuiGrande=document.getElementById('cuiGrande'),qrComprobante=document.getElementById('qrComprobante'),
+  contraseñaPdf=document.getElementById('contraseñaPdf'),fechaComprobante=document.getElementById('fechaComprobante'),
+  comprobanteContainer=document.getElementById('comprobanteContainer');
+
+  function onlyDigits(s){return s.replace(/\D/g,'');}
+  function randomPassword(len=6){const c='ABCDEFGHJKMNPQRSTUVWXYZ23456789';let o='';for(let i=0;i<len;i++)o+=c.charAt(Math.floor(Math.random()*c.length));return o;}
+
+  // 🔹 CONSULTAR INFORMACIÓN
+  consultBtn.addEventListener('click', async ()=>{
+    const cui=onlyDigits(cuiInput.value).trim();
+    if(!cui){alert('Ingrese su número de CUI/DPI.');return;}
+    if(!noGuate.checked&&cui.length!==13){alert('El CUI debe tener 13 dígitos.');return;}
+    cuiForm.value=cui;
+
+    try {
+      const res = await fetch(`${API_URL}/devotos/${cui}`);
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      nombresEl.value = data.nombres || '';
+      apellidosEl.value = data.apellidos || '';
+      telefonoEl.value = data.telefono || '';
+      correoEl.value = data.correo || '';
+      direccionEl.value = data.direccion || '';
+      fnEl.value = data.fn || '';
+      notaEl.value = data.nota || '';
+      if(data.sexo) document.querySelector(`input[name="sexo"][value="${data.sexo}"]`)?.click();
+      alert('Información encontrada.');
+    } catch {
+      alert('No se encontró información, puede registrarse.');
+    }
+
+    step1.classList.remove('visible');step1.classList.add('form-section');
+    step2.classList.add('visible');step2.classList.remove('form-section');
+  });
+
+  // 🔙 VOLVER
+  backBtn.addEventListener('click',()=>{step2.classList.remove('visible');step2.classList.add('form-section');step1.classList.add('visible');step1.classList.remove('form-section');});
+
+  // 🔹 GUARDAR / ACTUALIZAR DEVOTO
+  devotoForm.addEventListener('submit',async e=>{
+    e.preventDefault();
+    const data={cui:onlyDigits(cuiForm.value),nombres:nombresEl.value.trim(),apellidos:apellidosEl.value.trim(),
+      telefono:telefonoEl.value.trim(),correo:correoEl.value.trim(),direccion:direccionEl.value.trim(),
+      fn:fnEl.value,nota:notaEl.value.trim(),sexo:(document.querySelector('input[name="sexo"]:checked')||{}).value||''};
+
+    if(!data.nombres||!data.apellidos||!data.cui||!data.correo){alert('Complete los campos obligatorios.');return;}
+
+    try {
+      const res = await fetch(`${API_URL}/devotos`, {
+        method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data)
+      });
+      const r = await res.json();
+      alert(r.message);
+    } catch {
+      alert('Error al guardar en la base de datos.');
+    }
+
+    // Generar comprobante
+    tdCui.textContent=data.cui;tdNombres.textContent=data.nombres;tdApellidos.textContent=data.apellidos;
+    tdFn.textContent=data.fn||'-';tdTel.textContent=data.telefono||'-';tdCorreo.textContent=data.correo||'-';
+    tdDir.textContent=data.direccion||'-';cuiGrande.textContent=data.cui;fechaComprobante.textContent=new Date().toLocaleDateString();
+
+    const pass=randomPassword(6);contraseñaPdf.textContent=pass;
+    const qrContent=[`CUI: ${data.cui}`,`Nombres: ${data.nombres}`,`Apellidos: ${data.apellidos}`,`Correo: ${data.correo}`,`Teléfono: ${data.telefono||'-'}`,`Dirección: ${data.direccion||'-'}`,`Sexo: ${data.sexo||'-'}`,`Contraseña: ${pass}`].join('\n');
+    try{const dataUrl=await QRCode.toDataURL(qrContent,{width:400,margin:1});qrComprobante.src=dataUrl;previewQr.src=dataUrl;previewText.textContent=qrContent;}catch(err){alert('Error generando QR');return;}
+    comprobanteContainer.style.display='block';
+    setTimeout(async()=>{
+      const el=document.getElementById('comprobante');
+      const canvas=await html2canvas(el,{scale:2,useCORS:true});
+      const imgData=canvas.toDataURL('image/png');
+      const pdf=new jsPDF({unit:'mm',format:'a4'});
+      const pdfW=pdf.internal.pageSize.getWidth();
+      const imgProps=pdf.getImageProperties(imgData);
+      const imgH=(imgProps.height*pdfW)/imgProps.width;
+      pdf.addImage(imgData,'PNG',0,0,pdfW,imgH);
+      pdf.save(`comprobanteDevoto_${data.cui}.pdf`);
+      alert('PDF generado correctamente.');
+    },400);
+  });
+
+  downloadQrBtn.addEventListener('click',()=>{if(!previewQr.src)alert('No hay QR generado aún.');});
+  </script>
+</body>
+</html>

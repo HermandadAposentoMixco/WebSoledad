@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Panel de Registros - Hermandad</title>
+  <style>
+    body { font-family: Arial; margin: 20px; background: #f4f4f4; }
+    h1 { text-align: center; }
+    table { width: 100%; border-collapse: collapse; background: white; margin-top: 20px; }
+    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+    tr:nth-child(even) { background: #f9f9f9; }
+    input { padding: 8px; width: 100%; max-width: 300px; }
+    .center { text-align: center; margin-bottom: 10px; }
+  </style>
+</head>
+<body>
+  <h1>Panel de Registros - Hermandad Virgen de la Soledad</h1>
+  <div class="center">
+    <input id="buscar" type="text" placeholder="Buscar por nombre o teléfono...">
+  </div>
+  <table id="tabla">
+    <thead>
+      <tr>
+        <th>CUI</th>
+        <th>Nombres</th>
+        <th>Apellidos</th>
+        <th>Teléfono</th>
+        <th>Correo</th>
+        <th>Dirección</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <script>
+    const API = "http://localhost:3000/api";
+    const tbody = document.querySelector("tbody");
+    const buscar = document.getElementById("buscar");
+
+    async function cargar() {
+      const res = await fetch(`${API}/all`);
+      const data = await res.json();
+      mostrar(data);
+    }
+
+    function mostrar(data) {
+      tbody.innerHTML = data.map(d => `
+        <tr>
+          <td>${d.cui}</td>
+          <td>${d.nombres}</td>
+          <td>${d.apellidos}</td>
+          <td>${d.telefono || '-'}</td>
+          <td>${d.correo}</td>
+          <td>${d.direccion || '-'}</td>
+        </tr>
+      `).join('');
+    }
+
+    buscar.addEventListener("input", async e => {
+      const q = e.target.value.trim();
+      const res = await fetch(`${API}/search?q=${q}`);
+      const data = await res.json();
+      mostrar(data);
+    });
+
+    cargar();
+  </script>
+</body>
+</html>
