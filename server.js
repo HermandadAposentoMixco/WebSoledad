@@ -3,7 +3,7 @@ import cors from "cors";
 import mysql from "mysql2";
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
 // 🛠️ Configuración de conexión MySQL (Clever Cloud)
 const db = mysql.createConnection({
@@ -108,6 +108,8 @@ app.get("/api/all", (req, res) => {
     res.json(results);
   });
 });
+app.get("/", (req, res) => res.send("Backend funcionando ✅"));
+
 
 // 🚀 Iniciar servidor
 app.listen(PORT, () =>

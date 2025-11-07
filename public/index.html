@@ -176,7 +176,9 @@
     // 🔹 CAMBIA ESTA LÍNEA:
     // const API_URL = "http://localhost:3000/api";
     // 🔹 POR ESTA:
-    const API_URL = "https://websoledad.onrender.com/api";
+    const API_URL = "https://paginawebsoledad.onrender.com/api";
+    app.use(express.static("public"));
+
   
     const step1=document.getElementById('step1'),step2=document.getElementById('step2');
     const consultBtn=document.getElementById('consultBtn'),backBtn=document.getElementById('backBtn');
