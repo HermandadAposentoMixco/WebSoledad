@@ -202,18 +202,7 @@
   </div>
 
   <script>
-    const imgData = canvas.toDataURL('image/png');
-const pdf = new jsPDF({unit:'mm', format:'a4'});
-const pdfW = pdf.internal.pageSize.getWidth();
-const pdfH = pdf.internal.pageSize.getHeight();
-const imgProps = pdf.getImageProperties(imgData);
-
 // Ajustar altura proporcional
-const imgWidth = pdfW;
-const imgHeight = (imgProps.height * imgWidth) / imgProps.width;
-
-pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
-pdf.save(`comprobanteDevoto_${data.cui}.pdf`);
 
     const { jsPDF } = window.jspdf;
     const API_URL = "https://paginawebsoledad.onrender.com/api";
@@ -328,34 +317,35 @@ pdf.save(`comprobanteDevoto_${data.cui}.pdf`);
       comprobanteContainer.style.display = 'block';
 
       // Generar PDF en una sola hoja (desktop o móvil)
-      setTimeout(async()=>{
-        const el = document.getElementById('comprobante');
-        const canvas = await html2canvas(el,{scale:2,useCORS:true});
-        const imgData = canvas.toDataURL('image/png');
+      // Generar PDF en una sola hoja (desktop o móvil)
+setTimeout(async()=>{
+  const el = document.getElementById('comprobante');
+  const canvas = await html2canvas(el,{scale:2,useCORS:true});
+  const imgData = canvas.toDataURL('image/png');
 
-        const pdf = new jsPDF({unit:'mm', format:'a4'});
-        const pdfW = pdf.internal.pageSize.getWidth();
-        const pdfH = pdf.internal.pageSize.getHeight();
-        const imgProps = pdf.getImageProperties(imgData);
-        const imgWidth = pdfW;
-        const imgHeight = (imgProps.height * imgWidth) / imgProps.width;
+  const pdf = new jsPDF({unit:'mm', format:'a4'});
+  const pdfW = pdf.internal.pageSize.getWidth();
+  const pdfH = pdf.internal.pageSize.getHeight();
+  const imgProps = pdf.getImageProperties(imgData);
 
-        let heightLeft = imgHeight;
-        let position = 0;
+  // Calcular escala para que toda la imagen quepa en A4
+  let imgWidth = pdfW;
+  let imgHeight = (imgProps.height * imgWidth) / imgProps.width;
 
-        pdf.addImage(imgData,'PNG',0,position,imgWidth,imgHeight);
-        heightLeft -= pdfH;
+  if(imgHeight > pdfH){
+    const scale = pdfH / imgHeight;
+    imgWidth *= scale;
+    imgHeight *= scale;
+  }
 
-        while(heightLeft > 0){
-          position = heightLeft - imgHeight;
-          pdf.addPage();
-          pdf.addImage(imgData,'PNG',0,position,imgWidth,imgHeight);
-          heightLeft -= pdfH;
-        }
+  // Añadir imagen al PDF
+  pdf.addImage(imgData,'PNG',0,0,imgWidth,imgHeight);
 
-        pdf.save(`comprobanteDevoto_${data.cui}.pdf`);
-        alert('PDF generado correctamente.');
-      },400);
+  // Guardar PDF
+  pdf.save(`comprobanteDevoto_${data.cui}.pdf`);
+  alert('PDF generado correctamente.');
+},400);
+
     });
 
     // Descargar QR
