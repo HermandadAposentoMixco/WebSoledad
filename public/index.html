@@ -1,3 +1,4 @@
+<!-- Cambiado principal con backend de Render y listo para nota/turno -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -5,7 +6,6 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Confirmación - Generador Comprobante con QR</title>
 
-  <!-- Librerías -->
   <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -57,14 +57,14 @@
     footer.note{margin-top:18px;font-size:12px;color:#333}
 
     @media (max-width: 600px) {
-    body { padding: 8px; }
-    .grid { grid-template-columns: 1fr; gap: 12px; }
-    #comprobante { width: 100%; padding: 12px; font-size: 14px; }
-    .registro { flex-direction: column; }
-    .qrBox { margin-top: 12px; }
-    .cuiGrande { font-size: 18px; }
-    #previewQr { width: 80%; max-width: 220px; height: auto; }
-  }
+      body { padding: 8px; }
+      .grid { grid-template-columns: 1fr; gap: 12px; }
+      #comprobante { width: 100%; padding: 12px; font-size: 14px; }
+      .registro { flex-direction: column; }
+      .qrBox { margin-top: 12px; }
+      .cuiGrande { font-size: 18px; }
+      #previewQr { width: 80%; max-width: 220px; height: auto; }
+    }
   </style>
 </head>
 <body>
@@ -114,10 +114,31 @@
             </div>
 
             <label>Correo electrónico *</label><input id="correo" type="email" required placeholder="ejemplo@correo.com">
-            <label>Sexo</label><label style="margin-left:10px"><input type="radio" name="sexo" value="Mujer"> Mujer</label>
+            <label>Sexo</label>
+            <label style="margin-left:10px"><input type="radio" name="sexo" value="Mujer"> Mujer</label>
+            <label style="margin-left:10px"><input type="radio" name="sexo" value="Hombre"> Hombre</label>
             <label>Dirección</label><input id="direccion" type="text" placeholder="Ciudad, Calle, etc.">
             <label>Fecha de nacimiento</label><input id="fn" type="date">
-            <label>Hermandad Virgen de la Soledad</label><textarea id="nota" rows="3" placeholder="Observaciones..."></textarea>
+            <label>Hermandad / Turno *</label>
+            <select id="nota" required>
+              <option value="" disabled selected>Seleccione un turno</option>
+<option>Honor Salida - Santo Entierro</option>
+  <option>Honor Entrada - Santo Entierro</option>
+  <option>Honor Salida - Via Crusis</option>
+  <option>Honor Entrada - Vía Crusis</option>
+  <option>Primera Comisión Salida - Santo Entierro</option>
+  <option>Extra ordinario Encuentro - Vía Crusis</option>
+  <option>Extra Ordinario Cementerio</option>
+  <option>Extra Ordinario Panzalic - Sábado Santo</option>
+  <option>Extra Ordinario Calle Real- Santo Entierro</option>
+  <option>Extra Ordinario Parque de la Cruz - Santo Entierro</option>
+  <option>Extra Ordinario Monumento a la Virgen</option>
+  <option>Extra Ordinario Caballeros - Santo Entierro</option>
+  <option>Turno Ordinario Via Crusis</option>
+  <option>Turno Ordinario Santo Entierro</option>
+  <option>Turno Ordinario Sábado Santo</option>
+</select>
+
 
             <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px;">
               <button type="button" id="backBtn" class="btn secondary">Volver</button>
@@ -168,6 +189,7 @@
               <tr><td class="label">Teléfono</td><td id="tdTel"></td></tr>
               <tr><td class="label">Correo</td><td id="tdCorreo"></td></tr>
               <tr><td class="label">Dirección</td><td id="tdDir"></td></tr>
+              <tr><td class="label">Observaciones / Turno</td><td id="tdNota"></td></tr>
             </table>
           </div>
           <div class="qrBox">
@@ -179,17 +201,10 @@
     </div>
   </div>
 
-  <!-- SCRIPT -->
   <script>
     const { jsPDF } = window.jspdf;
-  
-    // 🔹 CAMBIA ESTA LÍNEA:
-    // const API_URL = "http://localhost:3000/api";
-    // 🔹 POR ESTA:
     const API_URL = "https://paginawebsoledad.onrender.com/api";
-    
 
-  
     const step1=document.getElementById('step1'),step2=document.getElementById('step2');
     const consultBtn=document.getElementById('consultBtn'),backBtn=document.getElementById('backBtn');
     const cuiInput=document.getElementById('cuiInput'),noGuate=document.getElementById('noGuate');
@@ -200,21 +215,21 @@
     fnEl=document.getElementById('fn'),notaEl=document.getElementById('nota');
     const previewQr=document.getElementById('previewQr'),previewText=document.getElementById('previewText'),downloadQrBtn=document.getElementById('downloadQrBtn');
     const tdCui=document.getElementById('tdCui'),tdNombres=document.getElementById('tdNombres'),tdApellidos=document.getElementById('tdApellidos'),
-    tdFn=document.getElementById('tdFn'),tdTel=document.getElementById('tdTel'),tdCorreo=document.getElementById('tdCorreo'),tdDir=document.getElementById('tdDir');
+    tdFn=document.getElementById('tdFn'),tdTel=document.getElementById('tdTel'),tdCorreo=document.getElementById('tdCorreo'),tdDir=document.getElementById('tdDir'),
+    tdNota=document.getElementById('tdNota');
     const cuiGrande=document.getElementById('cuiGrande'),qrComprobante=document.getElementById('qrComprobante'),
     contraseñaPdf=document.getElementById('contraseñaPdf'),fechaComprobante=document.getElementById('fechaComprobante'),
     comprobanteContainer=document.getElementById('comprobanteContainer');
-  
+
     function onlyDigits(s){return s.replace(/\D/g,'');}
     function randomPassword(len=6){const c='ABCDEFGHJKMNPQRSTUVWXYZ23456789';let o='';for(let i=0;i<len;i++)o+=c.charAt(Math.floor(Math.random()*c.length));return o;}
-  
-    // 🔹 CONSULTAR INFORMACIÓN
+
     consultBtn.addEventListener('click', async ()=>{
       const cui=onlyDigits(cuiInput.value).trim();
       if(!cui){alert('Ingrese su número de CUI/DPI.');return;}
       if(!noGuate.checked&&cui.length!==13){alert('El CUI debe tener 13 dígitos.');return;}
       cuiForm.value=cui;
-  
+
       try {
         const res = await fetch(`${API_URL}/devotos/${cui}`);
         if (!res.ok) throw new Error();
@@ -231,23 +246,24 @@
       } catch {
         alert('No se encontró información, puede registrarse.');
       }
-  
+
       step1.classList.remove('visible');step1.classList.add('form-section');
       step2.classList.add('visible');step2.classList.remove('form-section');
     });
-  
-    // 🔙 VOLVER
-    backBtn.addEventListener('click',()=>{step2.classList.remove('visible');step2.classList.add('form-section');step1.classList.add('visible');step1.classList.remove('form-section');});
-  
-    // 🔹 GUARDAR / ACTUALIZAR DEVOTO
+
+    backBtn.addEventListener('click',()=>{
+      step2.classList.remove('visible');step2.classList.add('form-section');
+      step1.classList.add('visible');step1.classList.remove('form-section');
+    });
+
     devotoForm.addEventListener('submit',async e=>{
       e.preventDefault();
       const data={cui:onlyDigits(cuiForm.value),nombres:nombresEl.value.trim(),apellidos:apellidosEl.value.trim(),
         telefono:telefonoEl.value.trim(),correo:correoEl.value.trim(),direccion:direccionEl.value.trim(),
         fn:fnEl.value,nota:notaEl.value.trim(),sexo:(document.querySelector('input[name="sexo"]:checked')||{}).value||''};
-  
+
       if(!data.nombres||!data.apellidos||!data.cui||!data.correo){alert('Complete los campos obligatorios.');return;}
-  
+
       try {
         const res = await fetch(`${API_URL}/devotos`, {
           method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data)
@@ -257,50 +273,50 @@
       } catch {
         alert('Error al guardar en la base de datos.');
       }
-  
-      // Generar comprobante
+
       tdCui.textContent=data.cui;tdNombres.textContent=data.nombres;tdApellidos.textContent=data.apellidos;
       tdFn.textContent=data.fn||'-';tdTel.textContent=data.telefono||'-';tdCorreo.textContent=data.correo||'-';
-      tdDir.textContent=data.direccion||'-';cuiGrande.textContent=data.cui;fechaComprobante.textContent=new Date().toLocaleDateString();
-  
+      tdDir.textContent=data.direccion||'-';tdNota.textContent=data.nota||'-';
+      cuiGrande.textContent=data.cui;fechaComprobante.textContent=new Date().toLocaleDateString();
+
       const pass=randomPassword(6);contraseñaPdf.textContent=pass;
-      const qrContent=[`CUI: ${data.cui}`,`Nombres: ${data.nombres}`,`Apellidos: ${data.apellidos}`,`Correo: ${data.correo}`,`Teléfono: ${data.telefono||'-'}`,`Dirección: ${data.direccion||'-'}`,`Sexo: ${data.sexo||'-'}`,`Contraseña: ${pass}`].join('\n');
+      const qrContent=[`CUI: ${data.cui}`,`Nombres: ${data.nombres}`,`Apellidos: ${data.apellidos}`,`Correo: ${data.correo}`,`Teléfono: ${data.telefono||'-'}`,`Dirección: ${data.direccion||'-'}`,`Sexo: ${data.sexo||'-'}`,`Turno: ${data.nota||'-'}`,`Contraseña: ${pass}`].join('\n');
       try{const dataUrl=await QRCode.toDataURL(qrContent,{width:400,margin:1});qrComprobante.src=dataUrl;previewQr.src=dataUrl;previewText.textContent=qrContent;}catch(err){alert('Error generando QR');return;}
       comprobanteContainer.style.display='block';
-      // 🔹 Reemplaza esta sección dentro de devotoForm.submit:
-setTimeout(async()=>{
-  const el=document.getElementById('comprobante');
-  const canvas=await html2canvas(el,{scale:2,useCORS:true});
-  const imgData=canvas.toDataURL('image/png');
 
-  const pdf=new jsPDF({unit:'mm',format:'a4'});
-  const pdfW=pdf.internal.pageSize.getWidth();
-  const pdfH=pdf.internal.pageSize.getHeight();
-  const imgProps=pdf.getImageProperties(imgData);
-  const imgWidth = pdfW;
-  const imgHeight = (imgProps.height * imgWidth) / imgProps.width;
+      setTimeout(async()=>{
+        const el=document.getElementById('comprobante');
+        const canvas=await html2canvas(el,{scale:2,useCORS:true});
+        const imgData=canvas.toDataURL('image/png');
 
-  let heightLeft = imgHeight;
-  let position = 0;
+        const pdf=new jsPDF({unit:'mm',format:'a4'});
+        const pdfW=pdf.internal.pageSize.getWidth();
+        const pdfH=pdf.internal.pageSize.getHeight();
+        const imgProps=pdf.getImageProperties(imgData);
+        const imgWidth = pdfW;
+        const imgHeight = (imgProps.height * imgWidth) / imgProps.width;
 
-  pdf.addImage(imgData,'PNG',0,position,imgWidth,imgHeight);
-  heightLeft -= pdfH;
+        let heightLeft = imgHeight;
+        let position = 0;
 
-  while(heightLeft > 0){
-    position = heightLeft - imgHeight;
-    pdf.addPage();
-    pdf.addImage(imgData,'PNG',0,position,imgWidth,imgHeight);
-    heightLeft -= pdfH;
-  }
+        pdf.addImage(imgData,'PNG',0,position,imgWidth,imgHeight);
+        heightLeft -= pdfH;
 
-  pdf.save(`comprobanteDevoto_${data.cui}.pdf`);
-  alert('PDF generado correctamente.');
-},400);
+        while(heightLeft > 0){
+          position = heightLeft - imgHeight;
+          pdf.addPage();
+          pdf.addImage(imgData,'PNG',0,position,imgWidth,imgHeight);
+          heightLeft -= pdfH;
+        }
+
+        pdf.save(`comprobanteDevoto_${data.cui}.pdf`);
+        alert('PDF generado correctamente.');
+      },400);
 
     });
-  
+
     downloadQrBtn.addEventListener('click',()=>{if(!previewQr.src)alert('No hay QR generado aún.');});
   </script>
-  
 </body>
 </html>
+

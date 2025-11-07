@@ -16,7 +16,7 @@
 <body>
   <h1>Panel de Registros - Hermandad Virgen de la Soledad</h1>
   <div class="center">
-    <input id="buscar" type="text" placeholder="Buscar por nombre o teléfono...">
+    <input id="buscar" type="text" placeholder="Buscar por nombre, teléfono o turno...">
   </div>
   <table id="tabla">
     <thead>
@@ -27,6 +27,7 @@
         <th>Teléfono</th>
         <th>Correo</th>
         <th>Dirección</th>
+        <th>Turno</th>
       </tr>
     </thead>
     <tbody></tbody>
@@ -52,6 +53,7 @@
           <td>${d.telefono || '-'}</td>
           <td>${d.correo}</td>
           <td>${d.direccion || '-'}</td>
+          <td>${d.nota || '-'}</td>
         </tr>
       `).join('');
     }
