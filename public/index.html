@@ -55,6 +55,16 @@
     .qrBox{width:100%;max-width:200px;text-align:center;margin:auto}
     .nota{font-size:12px;color:#444;margin-top:12px;line-height:1.2}
     footer.note{margin-top:18px;font-size:12px;color:#333}
+
+    @media (max-width: 600px) {
+    body { padding: 8px; }
+    .grid { grid-template-columns: 1fr; gap: 12px; }
+    #comprobante { width: 100%; padding: 12px; font-size: 14px; }
+    .registro { flex-direction: column; }
+    .qrBox { margin-top: 12px; }
+    .cuiGrande { font-size: 18px; }
+    #previewQr { width: 80%; max-width: 220px; height: auto; }
+  }
   </style>
 </head>
 <body>
@@ -257,18 +267,36 @@
       const qrContent=[`CUI: ${data.cui}`,`Nombres: ${data.nombres}`,`Apellidos: ${data.apellidos}`,`Correo: ${data.correo}`,`Teléfono: ${data.telefono||'-'}`,`Dirección: ${data.direccion||'-'}`,`Sexo: ${data.sexo||'-'}`,`Contraseña: ${pass}`].join('\n');
       try{const dataUrl=await QRCode.toDataURL(qrContent,{width:400,margin:1});qrComprobante.src=dataUrl;previewQr.src=dataUrl;previewText.textContent=qrContent;}catch(err){alert('Error generando QR');return;}
       comprobanteContainer.style.display='block';
-      setTimeout(async()=>{
-        const el=document.getElementById('comprobante');
-        const canvas=await html2canvas(el,{scale:2,useCORS:true});
-        const imgData=canvas.toDataURL('image/png');
-        const pdf=new jsPDF({unit:'mm',format:'a4'});
-        const pdfW=pdf.internal.pageSize.getWidth();
-        const imgProps=pdf.getImageProperties(imgData);
-        const imgH=(imgProps.height*pdfW)/imgProps.width;
-        pdf.addImage(imgData,'PNG',0,0,pdfW,imgH);
-        pdf.save(`comprobanteDevoto_${data.cui}.pdf`);
-        alert('PDF generado correctamente.');
-      },400);
+      // 🔹 Reemplaza esta sección dentro de devotoForm.submit:
+setTimeout(async()=>{
+  const el=document.getElementById('comprobante');
+  const canvas=await html2canvas(el,{scale:2,useCORS:true});
+  const imgData=canvas.toDataURL('image/png');
+
+  const pdf=new jsPDF({unit:'mm',format:'a4'});
+  const pdfW=pdf.internal.pageSize.getWidth();
+  const pdfH=pdf.internal.pageSize.getHeight();
+  const imgProps=pdf.getImageProperties(imgData);
+  const imgWidth = pdfW;
+  const imgHeight = (imgProps.height * imgWidth) / imgProps.width;
+
+  let heightLeft = imgHeight;
+  let position = 0;
+
+  pdf.addImage(imgData,'PNG',0,position,imgWidth,imgHeight);
+  heightLeft -= pdfH;
+
+  while(heightLeft > 0){
+    position = heightLeft - imgHeight;
+    pdf.addPage();
+    pdf.addImage(imgData,'PNG',0,position,imgWidth,imgHeight);
+    heightLeft -= pdfH;
+  }
+
+  pdf.save(`comprobanteDevoto_${data.cui}.pdf`);
+  alert('PDF generado correctamente.');
+},400);
+
     });
   
     downloadQrBtn.addEventListener('click',()=>{if(!previewQr.src)alert('No hay QR generado aún.');});
