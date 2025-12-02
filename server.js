@@ -1,42 +1,32 @@
 import express from "express";
 import cors from "cors";
 import mysql from "mysql2";
-import path from "path";
-import { fileURLToPath } from "url";
 
 const app = express();
 const PORT = process.env.PORT || 4000;
 
+// 🛠️ Configuración de conexión MySQL (Clever Cloud)
 const db = mysql.createConnection({
   host: "bj3fh6z8bbrahbsbfbhy-mysql.services.clever-cloud.com",
   user: "uevjslvu5wpmi87t",
   password: "4r6r9xPecTRyfvYXFScJ",
   database: "bj3fh6z8bbrahbsbfbhy",
   port: 3306,
-  ssl: { require: true }
+  ssl: {
+  require: true
+}
 });
 
+// 🔗 Conectar a MySQL
 db.connect(err => {
   if (err) return console.error("❌ Error al conectar a MySQL:", err.message);
   console.log("✅ Conectado a MySQL (Clever Cloud)");
 });
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
 app.use(cors());
 app.use(express.json());
 
-// --- Rutas API ---
-app.get('/api/status', (req, res) => res.send('Backend funcionando ✅'));
-
-app.get('/api/all', (req, res) => {
-  db.query("SELECT * FROM devotos ORDER BY fecha_registro DESC", (err, results) => {
-    if (err) return res.status(500).json({ error: "Error cargando registros" });
-    res.json(results);
-  });
-});
-
+// 📌 Obtener devoto por CUI
 app.get("/api/devotos/:cui", (req, res) => {
   const { cui } = req.params;
   db.query("SELECT * FROM devotos WHERE cui = ?", [cui], (err, results) => {
@@ -92,15 +82,15 @@ app.get("/api/search", (req, res) => {
   });
 });
 
-
-// --- Servir frontend ---
-app.use(express.static(path.join(__dirname, 'public')));
-
-// --- SPA fallback ---
-app.get('*', (req, res, next) => {
-  if (req.originalUrl.startsWith('/api')) return next();
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+// 📋 Obtener todos los registros
+app.get("/api/all", (req, res) => {
+  db.query("SELECT * FROM devotos ORDER BY fecha_registro DESC", (err, results) => {
+    if (err) return res.status(500).json({ error: "Error cargando registros" });
+    res.json(results);
+  });
 });
 
-// --- Iniciar servidor ---
-app.listen(PORT, () => console.log(`🚀 Servidor backend escuchando en el puerto ${PORT}`));
+app.get("/", (req, res) => res.send("Backend funcionando ✅"));
+
+// 🚀 Iniciar servidor
+app.listen(PORT, () => console.log(`🚀 Servidor backend escuchando en http://localhost:${PORT}`));
