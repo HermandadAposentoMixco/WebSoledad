@@ -30,6 +30,10 @@ const __dirname = path.dirname(__filename);
 app.use(cors());
 app.use(express.json());
 
+app.get("/api/status", (req, res) => {
+  res.send("Backend funcionando ✅");
+});
+
 // 📌 Obtener devoto por CUI
 app.get("/api/devotos/:cui", (req, res) => {
   const { cui } = req.params;
@@ -94,15 +98,11 @@ app.get("/api/all", (req, res) => {
   });
 });
 
-app.get("/", (req, res) => res.send("Backend funcionando ✅"));
-
 // Servir frontend público
-app.use(express.static("public"));
+app.use(express.static(path.join(__dirname, "public")));
 
+// Esto debe ir DESPUÉS de servir archivos estáticos
 app.get("*", (req, res) => {
-  res.sendFile(path.resolve("public/index.html"));
+  res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
-
-// 🚀 Iniciar servidor
-app.listen(PORT, () => console.log(`🚀 Servidor backend escuchando en http://localhost:${PORT}`));
