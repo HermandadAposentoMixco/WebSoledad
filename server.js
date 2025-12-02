@@ -11,7 +11,8 @@ const db = mysql.createConnection({
   user: "uevjslvu5wpmi87t",
   password: "4r6r9xPecTRyfvYXFScJ",
   database: "bj3fh6z8bbrahbsbfbhy",
-  port: 3306
+  port: 3306,
+    ssl: { rejectUnauthorized: false }
 });
 
 // 🔗 Conectar a MySQL
