@@ -97,11 +97,12 @@ app.get("/api/all", (req, res) => {
 app.get("/", (req, res) => res.send("Backend funcionando ✅"));
 
 // Servir frontend público
-app.use(express.static(path.join(__dirname, "public")));
+app.use(express.static("public"));
 
 app.get("*", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "index.html"));
+  res.sendFile(path.resolve("public/index.html"));
 });
+
 
 // 🚀 Iniciar servidor
 app.listen(PORT, () => console.log(`🚀 Servidor backend escuchando en http://localhost:${PORT}`));
