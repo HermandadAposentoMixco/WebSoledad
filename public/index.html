@@ -155,6 +155,7 @@
           <img id="previewQr" src="" style="width:220px;height:220px;border:1px solid #eee;padding:10px;background:white">
           <div id="previewText" class="muted">Aquí se mostrará el contenido del QR cuando generes el comprobante.</div>
           <button id="downloadQrBtn" class="btn secondary" style="padding:8px 10px;margin-top:8px;">Descargar QR</button>
+          <button id="btnPDF" class="btn" style="margin-top:12px;">Descargar PDF</button>
         </div>
       </div>
     </div>
@@ -205,7 +206,7 @@
 // Ajustar altura proporcional
 
     const { jsPDF } = window.jspdf;
-    const API_URL = "https://paginawebsoledad.onrender.com/api";
+    const API_URL = "https://websoledad-ahnf.onrender.com/api";
 
     const step1=document.getElementById('step1'), step2=document.getElementById('step2');
     const consultBtn=document.getElementById('consultBtn'), backBtn=document.getElementById('backBtn');
@@ -315,10 +316,7 @@
       } catch(err){alert('Error generando QR'); return;}
 
       comprobanteContainer.style.display = 'block';
-
-      // Generar PDF en una sola hoja (desktop o móvil)
-      // Generar PDF en una sola hoja (desktop o móvil)
-setTimeout(async()=>{
+      document.getElementById("btnPDF").addEventListener("click", async () => {
   const el = document.getElementById('comprobante');
   const canvas = await html2canvas(el,{scale:2,useCORS:true});
   const imgData = canvas.toDataURL('image/png');
@@ -328,23 +326,19 @@ setTimeout(async()=>{
   const pdfH = pdf.internal.pageSize.getHeight();
   const imgProps = pdf.getImageProperties(imgData);
 
-  // Calcular escala para que toda la imagen quepa en A4
   let imgWidth = pdfW;
   let imgHeight = (imgProps.height * imgWidth) / imgProps.width;
-
+  
   if(imgHeight > pdfH){
     const scale = pdfH / imgHeight;
     imgWidth *= scale;
     imgHeight *= scale;
   }
 
-  // Añadir imagen al PDF
   pdf.addImage(imgData,'PNG',0,0,imgWidth,imgHeight);
+  pdf.save(`comprobanteDevoto_${cuiForm.value}.pdf`);
+});
 
-  // Guardar PDF
-  pdf.save(`comprobanteDevoto_${data.cui}.pdf`);
-  alert('PDF generado correctamente.');
-},400);
 
     });
 
