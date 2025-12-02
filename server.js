@@ -98,12 +98,14 @@ app.get("/api/all", (req, res) => {
   });
 });
 
-// Servir frontend público
-app.use(express.static(path.join(__dirname, "public")));
 
-// SPA: cualquier ruta que **no empiece con /api** va a index.html
-app.get(/^\/(?!api).*/, (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "index.html"));
+// Servir frontend
+app.use(express.static(path.join(__dirname, 'public')));
+
+// SPA fallback
+app.get('*', (req, res, next) => {
+  if (req.path.startsWith('/api')) return next();
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 // 🚀 Iniciar servidor
