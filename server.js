@@ -1,6 +1,8 @@
 import express from "express";
 import cors from "cors";
 import mysql from "mysql2";
+import path from "path";
+import { fileURLToPath } from "url";
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -21,6 +23,9 @@ db.connect(err => {
   if (err) return console.error("❌ Error al conectar a MySQL:", err.message);
   console.log("✅ Conectado a MySQL (Clever Cloud)");
 });
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 app.use(cors());
 app.use(express.json());
@@ -90,6 +95,13 @@ app.get("/api/all", (req, res) => {
 });
 
 app.get("/", (req, res) => res.send("Backend funcionando ✅"));
+
+// Servir frontend público
+app.use(express.static(path.join(__dirname, "public")));
+
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "index.html"));
+});
 
 // 🚀 Iniciar servidor
 app.listen(PORT, () => console.log(`🚀 Servidor backend escuchando en http://localhost:${PORT}`));
