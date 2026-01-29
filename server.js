@@ -4,24 +4,34 @@ import mysql from "mysql2";
 import path from "path";
 import { fileURLToPath } from "url";
 
-const app = express();
-const PORT = process.env.PORT || 4000;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+app.use(express.static(path.join(__dirname, "public")));
+
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "index.html"));
+});
+
+
+const app = express();
+const PORT = process.env.PORT || 4000;
+
+
 
 // 🛠️ Configuración de conexión MySQL (Clever Cloud)
-const db = mysql.createConnection({
+const db = mysql.createPool({
   host: "bj3fh6z8bbrahbsbfbhy-mysql.services.clever-cloud.com",
   user: "uevjslvu5wpmi87t",
   password: "4r6r9xPecTRyfvYXFScJ",
   database: "bj3fh6z8bbrahbsbfbhy",
   port: 3306,
+  waitForConnections: true,
+  connectionLimit: 10,
   ssl: {
     rejectUnauthorized: false
   }
 });
-
 
 // 🔗 Conectar a MySQL
 db.connect(err => {
@@ -95,17 +105,6 @@ app.get("/api/all", (req, res) => {
     res.json(results);
   });
 });
-
-app.use(cors());
-app.use(express.json());
-
-app.use(express.static(path.join(__dirname, "public")));
-
-app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "index.html"));
-});
-
-
 
 // 🚀 Iniciar servidor
 app.listen(PORT, () => console.log(`🚀 Servidor backend escuchando en http://localhost:${PORT}`));
