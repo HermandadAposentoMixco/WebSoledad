@@ -91,7 +91,7 @@ app.get("/api/all", (req, res) => {
   });
 });
 
-app.get("/", (req, res) => res.send("Backend funcionando ✅"));
+
 
 // 🚀 Iniciar servidor
 app.listen(PORT, () => console.log(`🚀 Servidor backend escuchando en http://localhost:${PORT}`));
