@@ -91,6 +91,11 @@ app.get("/api/all", (req, res) => {
   });
 });
 
+app.use(cors());
+app.use(express.json());
+
+// 🔹 SIRVE LOS HTML
+app.use(express.static("public"));
 
 
 // 🚀 Iniciar servidor
