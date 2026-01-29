@@ -1,9 +1,14 @@
 import express from "express";
 import cors from "cors";
 import mysql from "mysql2";
+import path from "path";
+import { fileURLToPath } from "url";
 
 const app = express();
 const PORT = process.env.PORT || 4000;
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 
 // 🛠️ Configuración de conexión MySQL (Clever Cloud)
 const db = mysql.createConnection({
@@ -94,8 +99,12 @@ app.get("/api/all", (req, res) => {
 app.use(cors());
 app.use(express.json());
 
-// 🔹 SIRVE LOS HTML
-app.use(express.static("public"));
+app.use(express.static(path.join(__dirname, "public")));
+
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "index.html"));
+});
+
 
 
 // 🚀 Iniciar servidor
