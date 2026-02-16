@@ -94,7 +94,8 @@ app.post("/api/devotos", async (req, res) => {
       console.log("Intentando enviar correo a:", correo);
 
       await transporter.sendMail({
-        from: `"Hermandad Virgen de la Soledad" <${process.env.CORREO_SISTEMA}>`,
+        from: `"Hermandad Virgen de la Soledad" <no-reply@websoledad.org>`,
+        replyTo: process.env.CORREO_SISTEMA,
         to: correo,
         subject: "Comprobante de Registro",
         html: `<h2>Registro completado</h2>
