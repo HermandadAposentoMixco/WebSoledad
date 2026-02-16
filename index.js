@@ -1,9 +1,12 @@
 import express from "express";
 import cors from "cors";
 import mysql from "mysql2";
-import nodemailer from "nodemailer";
 import path from "path";
 import { fileURLToPath } from "url";
+import nodemailer from "nodemailer";
+import dotenv from "dotenv";
+dotenv.config();
+
 
 // --------------------------------------------------
 // CONFIG BÁSICA
@@ -21,10 +24,34 @@ app.use(cors());
 app.use(express.json());
 
 // --------------------------------------------------
+// VERIFICAR VARIABLES DE ENTORNO
+// --------------------------------------------------
+console.log("Correo sistema:", process.env.CORREO_SISTEMA);
+console.log("Pass correo existe?:", !!process.env.PASS_CORREO);
+
+// --------------------------------------------------
+// CONFIGURAR CORREO
+// --------------------------------------------------
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: process.env.CORREO_SISTEMA,
+    pass: process.env.PASS_CORREO
+  }
+});
+
+transporter.verify(function (error, success) {
+  if (error) {
+    console.log("❌ Error conexión correo:", error);
+  } else {
+    console.log("✅ Servidor de correo listo para enviar");
+  }
+});
+
+// --------------------------------------------------
 // SERVIR FRONTEND
 // --------------------------------------------------
 app.use(express.static(path.join(__dirname, "public")));
-
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
@@ -44,52 +71,15 @@ const db = mysql.createPool({
 });
 
 // --------------------------------------------------
-// CONFIG CORREO
-// --------------------------------------------------
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.CORREO_SISTEMA,
-    pass: process.env.PASS_CORREO
-  }
-});
-
-async function enviarCorreo(devoto) {
-  await transporter.sendMail({
-    from: `"Hermandad Virgen de la Soledad" <${process.env.CORREO_SISTEMA}>`,
-    to: devoto.correo,
-    subject: "Comprobante de Registro - Hermandad Soledad",
-    html: `
-      <h2>Registro Confirmado</h2>
-      <p>Estimado(a) ${devoto.nombres} ${devoto.apellidos}</p>
-      <p>Su registro fue procesado correctamente.</p>
-      <p><strong>CUI:</strong> ${devoto.cui}</p>
-      <p><strong>Turno:</strong> ${devoto.nota || "-"}</p>
-      <br>
-      <p>Gracias por formar parte de la Hermandad Virgen de la Soledad Mixco.</p>
-    `
-  });
-}
-
-// --------------------------------------------------
 // RUTAS API
 // --------------------------------------------------
-app.get("/api/devotos/:cui", async (req, res) => {
-  try {
-    const { cui } = req.params;
-    const [rows] = await db.promise().query(
-      "SELECT * FROM devotos WHERE cui = ?",
-      [cui]
-    );
-
-    if (rows.length === 0) {
-      return res.status(404).json({ message: "No encontrado" });
-    }
-
-    res.json(rows[0]);
-  } catch (error) {
-    res.status(500).json({ error: "Error en la consulta" });
-  }
+app.get("/api/devotos/:cui", (req, res) => {
+  const { cui } = req.params;
+  db.query("SELECT * FROM devotos WHERE cui = ?", [cui], (err, results) => {
+    if (err) return res.status(500).json({ error: "Error en la consulta" });
+    if (results.length === 0) return res.status(404).json({ message: "No encontrado" });
+    res.json(results[0]);
+  });
 });
 
 app.post("/api/devotos", async (req, res) => {
@@ -99,52 +89,64 @@ app.post("/api/devotos", async (req, res) => {
     return res.status(400).json({ error: "Faltan campos obligatorios" });
   }
 
-  try {
-    const [rows] = await db.promise().query(
-      "SELECT * FROM devotos WHERE cui = ?",
-      [cui]
-    );
+  const enviarCorreo = async () => {
+    try {
+      console.log("Intentando enviar correo a:", correo);
 
-    if (rows.length > 0) {
-      await db.promise().query(`
-        UPDATE devotos
-        SET nombres=?, apellidos=?, telefono=?, correo=?, direccion=?, fn=?, nota=?, sexo=?
-        WHERE cui=?`,
-        [nombres, apellidos, telefono, correo, direccion, fn, nota, sexo, cui]
-      );
-    } else {
-      await db.promise().query(`
-        INSERT INTO devotos (cui, nombres, apellidos, telefono, correo, direccion, fn, nota, sexo)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [cui, nombres, apellidos, telefono, correo, direccion, fn, nota, sexo]
-      );
+      await transporter.sendMail({
+        from: `"Hermandad Virgen de la Soledad" <${process.env.CORREO_SISTEMA}>`,
+        to: correo,
+        subject: "Comprobante de Registro",
+        html: `<h2>Registro completado</h2>
+               <p>Estimado/a ${nombres} ${apellidos},</p>
+               <p>Su registro fue procesado correctamente.</p>
+               <p><strong>CUI:</strong> ${cui}</p>
+               <p><strong>Turno:</strong> ${nota || '-'} </p>
+               <p>Conserve este correo como comprobante.</p>`
+      });
+
+      console.log("Correo enviado correctamente");
+      return true;
+    } catch (err) {
+      console.log("ERROR ENVIANDO CORREO:", err);
+      return false;
     }
+  };
 
-    // 🔥 Enviar correo automáticamente
-    await enviarCorreo({ cui, nombres, apellidos, correo, nota });
+  db.query("SELECT * FROM devotos WHERE cui = ?", [cui], async (err, results) => {
+    if (err) return res.status(500).json({ error: "Error verificando registro" });
 
-    res.json({ message: "Registro procesado y correo enviado correctamente" });
+    if (results.length > 0) {
+      const sql = `UPDATE devotos SET nombres=?, apellidos=?, telefono=?, correo=?, direccion=?, fn=?, nota=?, sexo=? WHERE cui=?`;
+      const params = [nombres, apellidos, telefono, correo, direccion, fn, nota, sexo, cui];
 
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Error procesando registro" });
-  }
+      db.query(sql, params, async err2 => {
+        if (err2) return res.status(500).json({ error: "Error al actualizar registro" });
+
+        await enviarCorreo();
+        res.json({ message: "Actualizado correctamente y correo enviado" });
+      });
+    } else {
+      const sql = `INSERT INTO devotos (cui, nombres, apellidos, telefono, correo, direccion, fn, nota, sexo) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+      const params = [cui, nombres, apellidos, telefono, correo, direccion, fn, nota, sexo];
+
+      db.query(sql, params, async err3 => {
+        if (err3) return res.status(500).json({ error: "Error al guardar registro" });
+
+        await enviarCorreo();
+        res.json({ message: "Registrado correctamente y correo enviado" });
+      });
+    }
+  });
 });
 
-app.get("/api/all", async (req, res) => {
-  try {
-    const [rows] = await db.promise().query(
-      "SELECT * FROM devotos ORDER BY fecha_registro DESC"
-    );
-    res.json(rows);
-  } catch (error) {
-    res.status(500).json({ error: "Error cargando registros" });
-  }
+app.get("/api/all", (req, res) => {
+  db.query("SELECT * FROM devotos ORDER BY fecha_registro DESC", (err, results) => {
+    if (err) return res.status(500).json({ error: "Error cargando registros" });
+    res.json(results);
+  });
 });
 
-// --------------------------------------------------
-// HEALTH CHECK (Render)
-// --------------------------------------------------
 app.get("/healthz", (req, res) => res.send("OK"));
 
 // --------------------------------------------------
