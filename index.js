@@ -102,57 +102,39 @@ app.post("/api/devotos", async (req, res) => {
                <p>Estimado/a ${nombres} ${apellidos},</p>
                <p>Su registro fue procesado correctamente.</p>
                <p><strong>CUI:</strong> ${cui}</p>
-               <p><strong>Turno:</strong> ${nota || '-'} </p>
-               <p>Conserve este correo como comprobante.</p>`
+               <p><strong>Turno:</strong> ${nota || '-'}</p>`
       });
 
       console.log("Correo enviado correctamente");
-      return true;
     } catch (err) {
       console.log("ERROR ENVIANDO CORREO:", err);
-      return false;
     }
   };
 
-  db.query("SELECT * FROM devotos WHERE cui = ?", [cui], async (err, results) => {
-    if (err) return res.status(500).json({ error: "Error verificando registro" });
+  try {
+    const [results] = await db.promise().query("SELECT * FROM devotos WHERE cui = ?", [cui]);
 
     if (results.length > 0) {
-      const sql = `UPDATE devotos SET nombres=?, apellidos=?, telefono=?, correo=?, direccion=?, fn=?, nota=?, sexo=? WHERE cui=?`;
-      const params = [nombres, apellidos, telefono, correo, direccion, fn, nota, sexo, cui];
-
-      db.query(sql, params, async err2 => {
-        if (err2) return res.status(500).json({ error: "Error al actualizar registro" });
-
-        await enviarCorreo();
-        res.json({ message: "Actualizado correctamente y correo enviado" });
-      });
+      await db.promise().query(
+        `UPDATE devotos SET nombres=?, apellidos=?, telefono=?, correo=?, direccion=?, fn=?, nota=?, sexo=? WHERE cui=?`,
+        [nombres, apellidos, telefono, correo, direccion, fn, nota, sexo, cui]
+      );
     } else {
-      const sql = `INSERT INTO devotos (cui, nombres, apellidos, telefono, correo, direccion, fn, nota, sexo) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
-      const params = [cui, nombres, apellidos, telefono, correo, direccion, fn, nota, sexo];
-
-      db.query(sql, params, async err3 => {
-        if (err3) return res.status(500).json({ error: "Error al guardar registro" });
-
-        await enviarCorreo();
-        res.json({ message: "Registrado correctamente y correo enviado" });
-      });
+      await db.promise().query(
+        `INSERT INTO devotos (cui, nombres, apellidos, telefono, correo, direccion, fn, nota, sexo)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [cui, nombres, apellidos, telefono, correo, direccion, fn, nota, sexo]
+      );
     }
-  });
-});
 
-app.get("/api/all", (req, res) => {
-  db.query("SELECT * FROM devotos ORDER BY fecha_registro DESC", (err, results) => {
-    if (err) return res.status(500).json({ error: "Error cargando registros" });
-    res.json(results);
-  });
-});
+    // RESPONDE PRIMERO
+    res.json({ message: "Registro guardado correctamente" });
 
-app.get("/healthz", (req, res) => res.send("OK"));
+    // ENVÍA DESPUÉS (no bloquea la petición)
+    enviarCorreo();
 
-// --------------------------------------------------
-// START SERVER
-// --------------------------------------------------
-app.listen(PORT, () => {
-  console.log(`🚀 Servidor escuchando en puerto ${PORT}`);
+  } catch (error) {
+    console.log("ERROR GENERAL:", error);
+    res.status(500).json({ error: "Error en el servidor" });
+  }
 });
