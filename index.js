@@ -32,10 +32,10 @@ app.get("/", (req, res) => {
 // MYSQL (POOL)
 // --------------------------------------------------
 const db = mysql.createPool({
-  host: "bj3fh6z8bbrahbsbfbhy-mysql.services.clever-cloud.com",
-  user: "uevjslvu5wpmi87t",
-  password: "4r6r9xPecTRyfvYXFScJ",
-  database: "bj3fh6z8bbrahbsbfbhy",
+  host: "bc1f5keqcm2p0h7qnkw6-mysql.services.clever-cloud.com",
+  user: "u7hsnsh0t3uzwlc0",
+  password: "4mqEiSVuxLl4nEcjFCjd",
+  database: "bc1f5keqcm2p0h7qnkw6",
   port: 3306,
   waitForConnections: true,
   connectionLimit: 10,

@@ -3,10 +3,10 @@
   "version": "0.0.0",
   "description": "",
   "type": "module",
-  "main": "backend/server.js",
+  "main": "backend/index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node server.js"
+    "start": "node index.js"
   },
   "repository": {
     "type": "git",
