@@ -96,25 +96,56 @@ app.post("/api/devotos", async (req, res) => {
 
     await transporter.sendMail({
   from: `"Hermandad Virgen de la Soledad" <${process.env.CORREO_SISTEMA}>`,
-  to: correo, // usar la variable correcta
+  to: correo,
   subject: "Confirmación de Registro - Hermandad Virgen de la Soledad",
   html: `
-    <h2>Registro Completado ✅</h2>
-    <p>Estimado/a ${nombres} ${apellidos},</p>
-    <p>Su registro fue procesado correctamente. Aquí están sus datos:</p>
-    <ul>
-      <li><strong>CUI:</strong> ${cui}</li>
-      <li><strong>Teléfono:</strong> ${telefono || '-'}</li>
-      <li><strong>Correo:</strong> ${correo}</li>
-      <li><strong>Dirección:</strong> ${direccion || '-'}</li>
-      <li><strong>Fecha Nacimiento:</strong> ${fn || '-'}</li>
-      <li><strong>Turno / Nota:</strong> ${nota || '-'}</li>
-      <li><strong>Sexo:</strong> ${sexo || '-'}</li>
-    </ul>
-    <p>Conserve este correo como comprobante.</p>
+    <div style="font-family: Arial, sans-serif; color: #333;">
+      <h2 style="color: #2c3e50;">Registro Completado ✅</h2>
+      <p>Estimado/a <strong>${nombres} ${apellidos}</strong>,</p>
+      <p>Nos complace informarle que su registro ha sido procesado de manera exitosa. A continuación, encontrará los detalles de su inscripción:</p>
+      <ul>
+        <li><strong>CUI:</strong> ${cui}</li>
+        <li><strong>Teléfono:</strong> ${telefono || '-'}</li>
+        <li><strong>Correo:</strong> ${correo}</li>
+        <li><strong>Dirección:</strong> ${direccion || '-'}</li>
+        <li><strong>Fecha de Nacimiento:</strong> ${fn || '-'}</li>
+        <li><strong>Turno / Nota:</strong> ${nota || '-'}</li>
+        <li><strong>Sexo:</strong> ${sexo || '-'}</li>
+      </ul>
+      <p>Le agradecemos su confianza en la <strong>Hermandad Virgen de la Soledad</strong> y nos honra contar con su participación.</p>
+      <p style="font-style: italic; color: #555;">"La devoción y el compromiso son la luz que guía nuestros pasos."</p>
+      <p>Conserve este correo como comprobante de su registro.</p>
+      <p>Atentamente,<br><strong>Hermandad Virgen de la Soledad</strong></p>
+    </div>
+  `,
+  text: `
+Registro Completado
+
+Estimado/a ${nombres} ${apellidos},
+
+Nos complace informarle que su registro ha sido procesado de manera exitosa. 
+A continuación, encontrará los detalles de su inscripción:
+
+CUI: ${cui}
+Teléfono: ${telefono || '-'}
+Correo: ${correo}
+Dirección: ${direccion || '-'}
+Fecha de Nacimiento: ${fn || '-'}
+Turno / Nota: ${nota || '-'}
+Sexo: ${sexo || '-'}
+
+Le agradecemos su confianza en la Hermandad Virgen de la Soledad y nos honra contar con su participación.
+
+"La devoción y el compromiso son la luz que guía nuestros pasos."
+
+Conserve este correo como comprobante de su registro.
+
+Atentamente,
+Hermandad Virgen de la Soledad
   `,
   replyTo: process.env.CORREO_SISTEMA
 });
+
 
 
     console.log("Correo enviado correctamente");
