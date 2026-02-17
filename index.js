@@ -91,66 +91,23 @@ app.post("/api/devotos", async (req, res) => {
   }
 
   const enviarCorreo = async () => {
-  try {
+ try {
     console.log("Intentando enviar correo a:", correo);
 
-    await transporter.sendMail({
+    if (!correo) throw new Error("Correo electrónico no proporcionado");
+
+   const info = await transporter.sendMail({
   from: `"Hermandad Virgen de la Soledad" <${process.env.CORREO_SISTEMA}>`,
   to: correo,
-  subject: "Confirmación de Registro - Hermandad Virgen de la Soledad",
-  html: `
-    <div style="font-family: Arial, sans-serif; color: #333;">
-      <h2 style="color: #2c3e50;">Registro Completado ✅</h2>
-      <p>Estimado/a <strong>${nombres} ${apellidos}</strong>,</p>
-      <p>Nos complace informarle que su registro ha sido procesado de manera exitosa. A continuación, encontrará los detalles de su inscripción:</p>
-      <ul>
-        <li><strong>CUI:</strong> ${cui}</li>
-        <li><strong>Teléfono:</strong> ${telefono || '-'}</li>
-        <li><strong>Correo:</strong> ${correo}</li>
-        <li><strong>Dirección:</strong> ${direccion || '-'}</li>
-        <li><strong>Fecha de Nacimiento:</strong> ${fn || '-'}</li>
-        <li><strong>Turno / Nota:</strong> ${nota || '-'}</li>
-        <li><strong>Sexo:</strong> ${sexo || '-'}</li>
-      </ul>
-      <p>Le agradecemos su confianza en la <strong>Hermandad Virgen de la Soledad</strong> y nos honra contar con su participación.</p>
-      <p style="font-style: italic; color: #555;">"La devoción y el compromiso son la luz que guía nuestros pasos."</p>
-      <p>Conserve este correo como comprobante de su registro.</p>
-      <p>Atentamente,<br><strong>Hermandad Virgen de la Soledad</strong></p>
-    </div>
-  `,
-  text: `
-Registro Completado
-
-Estimado/a ${nombres} ${apellidos},
-
-Nos complace informarle que su registro ha sido procesado de manera exitosa. 
-A continuación, encontrará los detalles de su inscripción:
-
-CUI: ${cui}
-Teléfono: ${telefono || '-'}
-Correo: ${correo}
-Dirección: ${direccion || '-'}
-Fecha de Nacimiento: ${fn || '-'}
-Turno / Nota: ${nota || '-'}
-Sexo: ${sexo || '-'}
-
-Le agradecemos su confianza en la Hermandad Virgen de la Soledad y nos honra contar con su participación.
-
-"La devoción y el compromiso son la luz que guía nuestros pasos."
-
-Conserve este correo como comprobante de su registro.
-
-Atentamente,
-Hermandad Virgen de la Soledad
-  `,
+  subject: "Confirmación de Registro",
+  html: `<p>Estimado/a ${nombres} ${apellidos}, su registro fue completado ✅</p>`,
+  text: `Estimado/a ${nombres} ${apellidos}, su registro fue completado ✅`,
   replyTo: process.env.CORREO_SISTEMA
 });
 
-
-
-    console.log("Correo enviado correctamente");
+    console.log("Correo enviado ✅ ID:", info.messageId);
   } catch (err) {
-    console.log("ERROR ENVIANDO CORREO:", err);
+    console.error("ERROR ENVIANDO CORREO:", err);
   }
 };
 
