@@ -99,18 +99,12 @@ app.post("/api/devotos", async (req, res) => {
   to: correoDestino,
   subject: "Confirmación de Registro",
   html: `<h2>Registro completado</h2>
-         <p>Estimado Devota(o) ${nombres} ${apellidos} con gran gozo espiritual y profunda devoción, comunicamos que la Hermandad de la Virgen Soledad ha registrado(a) en nuestra base de datos, su pre-inscripción.
-Invitamos a que pueda estar atento a nuestros canales de comunicación donde estaremos indicando la fecha para entrega de su Cartulina así mismo, que pueda realizar el pago de su turno.
-
-¡Que la fe y la devoción sigan guiando nuestro caminar!</p>
+         <p>Estimado/a ${nombres} ${apellidos},</p>
          <p>Su registro fue procesado correctamente.</p>
          <p><strong>CUI:</strong> ${cui}</p>
-         <p><strong>Turno:</strong> ${nota || '-'}</p>
-         <p><strong>Telefono:</strong> ${telefono}</p>`,
+         <p><strong>Turno:</strong> ${nota || '-'}</p>`,
   replyTo: process.env.CORREO_SISTEMA
 });
-
-
 
       console.log("Correo enviado correctamente");
     } catch (err) {
