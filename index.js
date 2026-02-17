@@ -105,7 +105,8 @@ Invitamos a que pueda estar atento a nuestros canales de comunicación donde est
 ¡Que la fe y la devoción sigan guiando nuestro caminar!</p>
          <p>Su registro fue procesado correctamente.</p>
          <p><strong>CUI:</strong> ${cui}</p>
-         <p><strong>Turno:</strong> ${nota || '-'}</p>`,
+         <p><strong>Turno:</strong> ${nota || '-'}</p>
+         <p><strong>Telefono:</strong> ${telefono}</p>`,
   replyTo: process.env.CORREO_SISTEMA
 });
 
