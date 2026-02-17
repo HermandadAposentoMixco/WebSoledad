@@ -95,53 +95,27 @@ app.post("/api/devotos", async (req, res) => {
     console.log("Intentando enviar correo a:", correo);
 
     await transporter.sendMail({
-      from: `"Hermandad Virgen de la Soledad" <${process.env.CORREO_SISTEMA}>`,
-      to: correo,  // usar la variable correcta
-      subject: "Confirmación de Registro - Hermandad Virgen de la Soledad",
-      html: `
-        <div style="font-family: Arial, sans-serif; color: #333;">
-          <h2 style="color: #2E86C1;">Registro Completado ✅</h2>
-          <p>Estimado/a <strong>${nombres} ${apellidos}</strong>,</p>
-          <p>Su registro fue procesado correctamente en nuestro sistema. A continuación, encontrará los detalles de su información:</p>
-          
-          <table style="border-collapse: collapse; width: 100%; max-width: 600px;">
-            <tr>
-              <td style="border: 1px solid #ddd; padding: 8px;"><strong>CUI</strong></td>
-              <td style="border: 1px solid #ddd; padding: 8px;">${cui}</td>
-            </tr>
-            <tr>
-              <td style="border: 1px solid #ddd; padding: 8px;"><strong>Teléfono</strong></td>
-              <td style="border: 1px solid #ddd; padding: 8px;">${telefono || '-'}</td>
-            </tr>
-            <tr>
-              <td style="border: 1px solid #ddd; padding: 8px;"><strong>Correo</strong></td>
-              <td style="border: 1px solid #ddd; padding: 8px;">${correo}</td>
-            </tr>
-            <tr>
-              <td style="border: 1px solid #ddd; padding: 8px;"><strong>Dirección</strong></td>
-              <td style="border: 1px solid #ddd; padding: 8px;">${direccion || '-'}</td>
-            </tr>
-            <tr>
-              <td style="border: 1px solid #ddd; padding: 8px;"><strong>Fecha de Nacimiento</strong></td>
-              <td style="border: 1px solid #ddd; padding: 8px;">${fn || '-'}</td>
-            </tr>
-            <tr>
-              <td style="border: 1px solid #ddd; padding: 8px;"><strong>Turno / Nota</strong></td>
-              <td style="border: 1px solid #ddd; padding: 8px;">${nota || '-'}</td>
-            </tr>
-            <tr>
-              <td style="border: 1px solid #ddd; padding: 8px;"><strong>Sexo</strong></td>
-              <td style="border: 1px solid #ddd; padding: 8px;">${sexo || '-'}</td>
-            </tr>
-          </table>
+  from: `"Hermandad Virgen de la Soledad" <${process.env.CORREO_SISTEMA}>`,
+  to: correo, // usar la variable correcta
+  subject: "Confirmación de Registro - Hermandad Virgen de la Soledad",
+  html: `
+    <h2>Registro Completado ✅</h2>
+    <p>Estimado/a ${nombres} ${apellidos},</p>
+    <p>Su registro fue procesado correctamente. Aquí están sus datos:</p>
+    <ul>
+      <li><strong>CUI:</strong> ${cui}</li>
+      <li><strong>Teléfono:</strong> ${telefono || '-'}</li>
+      <li><strong>Correo:</strong> ${correo}</li>
+      <li><strong>Dirección:</strong> ${direccion || '-'}</li>
+      <li><strong>Fecha Nacimiento:</strong> ${fn || '-'}</li>
+      <li><strong>Turno / Nota:</strong> ${nota || '-'}</li>
+      <li><strong>Sexo:</strong> ${sexo || '-'}</li>
+    </ul>
+    <p>Conserve este correo como comprobante.</p>
+  `,
+  replyTo: process.env.CORREO_SISTEMA
+});
 
-          <p style="margin-top: 20px;">Si alguno de los datos es incorrecto, por favor contáctenos a este correo.</p>
-          <p>¡Gracias por ser parte de la Hermandad Virgen de la Soledad! 🙏</p>
-          <p style="color: #555; font-size: 12px;">Este es un correo automático, por favor no responda directamente.</p>
-        </div>
-      `,
-      replyTo: process.env.CORREO_SISTEMA
-    });
 
     console.log("Correo enviado correctamente");
   } catch (err) {
