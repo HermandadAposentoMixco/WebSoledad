@@ -100,8 +100,27 @@ app.post("/api/devotos", async (req, res) => {
   from: `"Hermandad Virgen de la Soledad" <${process.env.CORREO_SISTEMA}>`,
   to: correo,
   subject: "Confirmación de Registro",
-  html: `<p>Estimado/a ${nombres} ${apellidos}, su registro fue completado ✅</p>`,
-  text: `Estimado/a ${nombres} ${apellidos}, su registro fue completado ✅`,
+   subject: "Confirmación de Registro - Hermandad Virgen de la Soledad",
+    html: `
+      <div style="font-family: Arial, sans-serif; color: #333;">
+        <h2 style="color: #2c3e50;">Registro Completado ✅</h2>
+        <p>Estimado/a <strong>${nombres} ${apellidos}</strong>,</p>
+        <p>Nos complace informarle que su registro ha sido procesado con éxito.</p>
+        <p>A continuación encontrará los datos de su inscripción:</p>
+        <ul>
+          <li><strong>CUI:</strong> ${cui}</li>
+          <li><strong>Teléfono:</strong> ${telefono || '-'}</li>
+          <li><strong>Correo:</strong> ${correo}</li>
+          <li><strong>Dirección:</strong> ${direccion || '-'}</li>
+          <li><strong>Fecha de Nacimiento:</strong> ${fn || '-'}</li>
+          <li><strong>Turno / Nota:</strong> ${nota || '-'}</li>
+          <li><strong>Sexo:</strong> ${sexo || '-'}</li>
+        </ul>
+        <p style="font-style: italic; color: #555;">"La devoción y el compromiso son la luz que guía nuestros pasos."</p>
+        <p>Le agradecemos su confianza en la <strong>Hermandad Virgen de la Soledad</strong> y le invitamos a conservar este correo como comprobante.</p>
+        <p>Atentamente,<br><strong>Hermandad Virgen de la Soledad</strong></p>
+      </div>
+    `,
   replyTo: process.env.CORREO_SISTEMA
 });
 
