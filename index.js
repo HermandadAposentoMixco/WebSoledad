@@ -1,3 +1,4 @@
+
 import express from "express";
 import cors from "cors";
 import mysql from "mysql2";
@@ -5,10 +6,6 @@ import path from "path";
 import { fileURLToPath } from "url";
 import nodemailer from "nodemailer";
 import dotenv from "dotenv";
-import PDFDocument from "pdfkit";
-import fs from "fs";
-import os from "os";
-
 dotenv.config();
 
 
@@ -94,110 +91,31 @@ app.post("/api/devotos", async (req, res) => {
   }
 
   const enviarCorreo = async () => {
-  try {
-    console.log("Intentando enviar correo a:", correo);
+    try {
+      console.log("Intentando enviar correo a:", correo);
 
-    // =========================
-    // CREAR PDF
-    // =========================
-   const filePath = path.join(os.tmpdir(), `comprobante_${cui}.pdf`);
-const doc = new PDFDocument({ margin: 40 });
+     await transporter.sendMail({
+  from: `"Hermandad Virgen de la Soledad" <${process.env.CORREO_SISTEMA}>`,
+  to: correo,  // corregido
+  subject: "Confirmación de Registro",
+  html: `<h2>Registro completado</h2>
+         <p>Estimado Devota(o) ${nombres} ${apellidos} con gran gozo espiritual y profunda devoción, comunicamos que la Hermandad de la Virgen Soledad ha registrado(a) en nuestra base de datos, su pre-inscripción.
+Invitamos a que pueda estar atento a nuestros canales de comunicación donde estaremos indicando la fecha para entrega de su Cartulina así mismo, que pueda realizar el pago de su turno.
 
-const stream = fs.createWriteStream(filePath);
-doc.pipe(stream);
-
-// Logo
-try {
-const logoPath = path.join(__dirname, "public", "escudoSoledad.png");
-doc.image(logoPath, 200, 30, { width: 180 });
-
-} catch {}
-
-doc.moveDown(6);
-doc.fontSize(18).text("HERMANDAD VIRGEN DE LA SOLEDAD MIXCO", { align: "center" });
-
-doc.moveDown();
-doc.fontSize(12).text(`Nombre: ${nombres} ${apellidos}`);
-doc.text(`CUI: ${cui}`);
-doc.text(`Correo: ${correo}`);
-doc.text(`Teléfono: ${telefono || "-"}`);
-doc.text(`Dirección: ${direccion || "-"}`);
-doc.text(`Turno: ${nota || "-"}`);
-doc.text(`Sexo: ${sexo || "-"}`);
-doc.text(`Fecha nacimiento: ${fn || "-"}`);
-
-doc.moveDown();
-doc.text("Su registro fue procesado correctamente.");
-doc.text("Presente este documento el día de entrega de cartulina.");
-
-doc.end();
-
-// ✅ Esperar correctamente a que termine
-await new Promise((resolve, reject) => {
-  stream.on("finish", resolve);
-  stream.on("error", reject);
+¡Que la fe y la devoción sigan guiando nuestro caminar!</p>
+         <p>Su registro fue procesado correctamente.</p>
+         <p><strong>CUI:</strong> ${cui}</p>
+         <p><strong>Turno:</strong> ${nota || '-'}</p>`,
+  replyTo: process.env.CORREO_SISTEMA
 });
 
-    // =========================
-    // ENVIAR CORREO
-    // =========================
-    await transporter.sendMail({
-      from: `"Hermandad Virgen de la Soledad" <${process.env.CORREO_SISTEMA}>`,
-      to: correo,
-      subject: "Confirmación de Registro - Hermandad Virgen de la Soledad",
-
-      html: `
-      <div style="font-family:Arial">
-
-        <img src="cid:logo" style="width:200px"><br><br>
-
-        <h2>Registro completado</h2>
-
-        <p>
-        Estimado Devota(o) <b>${nombres} ${apellidos}</b>, con gran gozo espiritual
-        comunicamos que la Hermandad de la Virgen de la Soledad ha registrado su pre-inscripción.
-        </p>
-
-        <p><b>CUI:</b> ${cui}</p>
-        <p><b>Turno:</b> ${nota || '-'}</p>
-
-        <p>Adjunto encontrará su comprobante oficial en PDF.</p>
-
-        <p>¡Que la fe y la devoción sigan guiando nuestro caminar!</p>
-
-      </div>
-      `,
-
-      attachments: [
-  {
-    filename: `Comprobante_${cui}.pdf`,
-    path: filePath
-  },
-  {
-    filename: "logo.png",
-    path: path.join(__dirname, "public", "escudoSoledad.png"),
-    cid: "logo"
-  }
-],
-      replyTo: process.env.CORREO_SISTEMA
-    });
-
-    console.log("Correo enviado correctamente");
-
-    // =========================
-    // BORRAR PDF (MUY IMPORTANTE)
-    // =========================
-    try {
-  fs.unlinkSync(filePath);
-} catch {}
 
 
-  } catch (err) {
-    console.log("ERROR ENVIANDO CORREO:", err);
-  }
-};
-
-     
+      console.log("Correo enviado correctamente");
+    } catch (err) {
+      console.log("ERROR ENVIANDO CORREO:", err);
+    }
+  };
 
   try {
     const [results] = await db.promise().query("SELECT * FROM devotos WHERE cui = ?", [cui]);
