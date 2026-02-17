@@ -96,7 +96,7 @@ app.post("/api/devotos", async (req, res) => {
 
      await transporter.sendMail({
   from: `"Hermandad Virgen de la Soledad" <${process.env.CORREO_SISTEMA}>`,
-  to: correo,  // corregido
+  to: correoDestino,
   subject: "Confirmación de Registro",
   html: `<h2>Registro completado</h2>
          <p>Estimado Devota(o) ${nombres} ${apellidos} con gran gozo espiritual y profunda devoción, comunicamos que la Hermandad de la Virgen Soledad ha registrado(a) en nuestra base de datos, su pre-inscripción.
