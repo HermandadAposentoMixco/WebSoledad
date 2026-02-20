@@ -1,4 +1,3 @@
-
 import express from "express";
 import cors from "cors";
 import mysql from "mysql2";
@@ -6,13 +5,10 @@ import path from "path";
 import { fileURLToPath } from "url";
 import nodemailer from "nodemailer";
 import dotenv from "dotenv";
-import fs from 'fs';
+import QRCode from "qrcode";
 
 dotenv.config();
 
-
-// --------------------------------------------------
-// CONFIG BÁSICA
 // --------------------------------------------------
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -21,19 +17,48 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // --------------------------------------------------
-// MIDDLEWARE
-// --------------------------------------------------
 app.use(cors());
 app.use(express.json());
 
 // --------------------------------------------------
-// VERIFICAR VARIABLES DE ENTORNO
+// VERIFICAR VARIABLES
 // --------------------------------------------------
 console.log("Correo sistema:", process.env.CORREO_SISTEMA);
 console.log("Pass correo existe?:", !!process.env.PASS_CORREO);
 
 // --------------------------------------------------
-// CONFIGURAR CORREO
+// GENERAR PASSWORD + QR
+// --------------------------------------------------
+function generarPassword(len = 6) {
+  const c = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+  let o = "";
+  for (let i = 0; i < len; i++)
+    o += c.charAt(Math.floor(Math.random() * c.length));
+  return o;
+}
+
+async function generarQR(data) {
+  const pass = generarPassword();
+
+  const contenido = [
+    `CUI: ${data.cui}`,
+    `Nombres: ${data.nombres}`,
+    `Apellidos: ${data.apellidos}`,
+    `Correo: ${data.correo}`,
+    `Teléfono: ${data.telefono || "-"}`,
+    `Dirección: ${data.direccion || "-"}`,
+    `Sexo: ${data.sexo || "-"}`,
+    `Turno: ${data.nota || "-"}`,
+    `Contraseña: ${pass}`
+  ].join("\n");
+
+  const qrBase64 = await QRCode.toDataURL(contenido, { width: 400 });
+
+  return { qrBase64, pass, contenido };
+}
+
+// --------------------------------------------------
+// CONFIG CORREO (AHORA SÍ EXISTE)
 // --------------------------------------------------
 const transporter = nodemailer.createTransport({
   service: "gmail",
@@ -43,13 +68,9 @@ const transporter = nodemailer.createTransport({
   }
 });
 
-transporter.verify(function (error, success) {
-  if (error) {
-    console.log("❌ Error conexión correo:", error);
-  } else {
-    console.log("✅ Servidor de correo listo para enviar");
-  }
-});
+transporter.verify()
+  .then(() => console.log("✅ Servidor de correo listo"))
+  .catch(err => console.log("❌ Error correo:", err.message));
 
 // --------------------------------------------------
 // SERVIR FRONTEND
@@ -60,7 +81,7 @@ app.get("/", (req, res) => {
 });
 
 // --------------------------------------------------
-// MYSQL (POOL)
+// MYSQL POOL
 // --------------------------------------------------
 const db = mysql.createPool({
   host: "bc1f5keqcm2p0h7qnkw6-mysql.services.clever-cloud.com",
@@ -73,8 +94,13 @@ const db = mysql.createPool({
   ssl: { rejectUnauthorized: false }
 });
 
+// mantener viva la conexión
+setInterval(() => {
+  db.query("SELECT 1");
+}, 30000);
+
 // --------------------------------------------------
-// RUTAS API
+// RUTAS
 // --------------------------------------------------
 app.get("/api/devotos/:cui", (req, res) => {
   const { cui } = req.params;
@@ -86,88 +112,74 @@ app.get("/api/devotos/:cui", (req, res) => {
 });
 
 app.post("/api/devotos", async (req, res) => {
+
   const { cui, nombres, apellidos, telefono, correo, direccion, fn, nota, sexo } = req.body;
 
-  if (!cui || !nombres || !apellidos || !correo) {
-    return res.status(400).json({ error: "Faltan campos obligatorios" });
+  // NORMALIZAR SEXO
+  let sexoDB = null;
+  if (sexo) {
+    const s = sexo.toLowerCase();
+    if (s.startsWith("h") || s.startsWith("m")) sexoDB = "Hombre";
+    if (s.startsWith("f")) sexoDB = "Mujer";
   }
-
-  const enviarCorreo = async () => {
- try {
-    console.log("Intentando enviar correo a:", correo);
-
-    if (!correo) throw new Error("Correo electrónico no proporcionado");
-
-   const info = await transporter.sendMail({
-  from: `"Hermandad Virgen de la Soledad" <${process.env.CORREO_SISTEMA}>`,
-  to: correo,
-  subject: "Confirmación de Registro - Hermandad Virgen de la Soledad",
-  html: `
-    <div style="font-family: Arial, sans-serif; color: #333;">
-      <h2 style="color: #2c3e50;">Registro Completado ✅</h2>
-      <p>Estimado/a <strong>${nombres} ${apellidos}</strong>,</p>
-      <p>Nos complace informarle que su registro ha sido procesado con éxito.</p>
-      <p>A continuación encontrará los datos de su inscripción:</p>
-      <ul>
-        <li><strong>CUI:</strong> ${cui}</li>
-        <li><strong>Teléfono:</strong> ${telefono || '-'}</li>
-        <li><strong>Correo:</strong> ${correo}</li>
-        <li><strong>Dirección:</strong> ${direccion || '-'}</li>
-        <li><strong>Fecha de Nacimiento:</strong> ${fn || '-'}</li>
-        <li><strong>Turno / Nota:</strong> ${nota || '-'}</li>
-        <li><strong>Sexo:</strong> ${sexo || '-'}</li>
-      </ul>
-      <p style="font-style: italic; color: #555;">"La devoción y el compromiso son la luz que guía nuestros pasos."</p>
-      <p>Le agradecemos su confianza en la <strong>Hermandad Virgen de la Soledad</strong> y le invitamos a conservar este correo como comprobante.</p>
-      <p>Atentamente,<br><strong>Hermandad Virgen de la Soledad</strong></p>
-    </div>
-  `,
-  text: `Estimado/a ${nombres} ${apellidos}, su registro ha sido completado exitosamente.
-CUI: ${cui}
-Teléfono: ${telefono || '-'}
-Correo: ${correo}
-Dirección: ${direccion || '-'}
-Fecha de Nacimiento: ${fn || '-'}
-Turno / Nota: ${nota || '-'}
-Sexo: ${sexo || '-'}
-"La devoción y el compromiso son la luz que guía nuestros pasos."
-Conserve este correo como comprobante.
-Atentamente, Hermandad Virgen de la Soledad`,
-  replyTo: process.env.CORREO_SISTEMA
-});
-
-console.log("Correo enviado ✅ ID:", info.messageId);
-
-  } catch (err) {
-    console.error("ERROR ENVIANDO CORREO:", err);
-  }
-};
-
 
   try {
-    const [results] = await db.promise().query("SELECT * FROM devotos WHERE cui = ?", [cui]);
 
-    if (results.length > 0) {
+    const qrData = await generarQR(req.body);
+
+    // EXISTE?
+    const [rows] = await db.promise().query(
+      "SELECT cui FROM devotos WHERE cui=?",
+      [cui]
+    );
+
+    if (rows.length > 0) {
+
       await db.promise().query(
-        `UPDATE devotos SET nombres=?, apellidos=?, telefono=?, correo=?, direccion=?, fn=?, nota=?, sexo=? WHERE cui=?`,
-        [nombres, apellidos, telefono, correo, direccion, fn, nota, sexo, cui]
+        `UPDATE devotos 
+         SET nombres=?, apellidos=?, telefono=?, correo=?, direccion=?, fn=?, nota=?, sexo=? 
+         WHERE cui=?`,
+        [nombres, apellidos, telefono, correo, direccion, fn, nota, sexoDB, cui]
       );
+
     } else {
+
       await db.promise().query(
         `INSERT INTO devotos (cui, nombres, apellidos, telefono, correo, direccion, fn, nota, sexo)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [cui, nombres, apellidos, telefono, correo, direccion, fn, nota, sexo]
+        [cui, nombres, apellidos, telefono, correo, direccion, fn, nota, sexoDB]
       );
     }
 
-    // RESPONDE PRIMERO
-    res.json({ message: "Registro guardado correctamente" });
+    // ENVIAR CORREO (NO ROMPE EL REGISTRO SI FALLA)
+    transporter.sendMail({
+      from: `"Hermandad Virgen de la Soledad" <${process.env.CORREO_SISTEMA}>`,
+      to: correo,
+      subject: "Comprobante de Registro",
+      html: `
+        <h2>Registro completado</h2>
+        <p><b>${nombres} ${apellidos}</b></p>
+        <p>CUI: ${cui}</p>
+        <p>Contraseña: <b>${qrData.pass}</b></p>
+        <p>Presente este código:</p>
+        <img src="${qrData.qrBase64}" width="250"/>
+      `
+    }).catch(e => console.log("⚠️ Correo no enviado:", e.message));
 
-    // ENVÍA DESPUÉS (no bloquea la petición)
-    enviarCorreo();
+    res.json({
+      message: "Registro guardado correctamente",
+      qr: qrData.qrBase64,
+      password: qrData.pass,
+      contenidoQR: qrData.contenido
+    });
 
   } catch (error) {
     console.log("ERROR GENERAL:", error);
-    res.status(500).json({ error: "Error en el servidor" });
+    res.status(500).json({ error: "Error al guardar en la base de datos." });
   }
+});
+
+// --------------------------------------------------
+app.listen(PORT, () => {
+  console.log(`🚀 Servidor escuchando en puerto ${PORT}`);
 });
