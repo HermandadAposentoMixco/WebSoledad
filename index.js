@@ -5,55 +5,30 @@ import path from "path";
 import { fileURLToPath } from "url";
 import nodemailer from "nodemailer";
 import dotenv from "dotenv";
-import QRCode from "qrcode";
+import multer from "multer";
 
 dotenv.config();
 
 // --------------------------------------------------
 const app = express();
 const PORT = process.env.PORT || 4000;
+const upload = multer({ storage: multer.memoryStorage() });
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // --------------------------------------------------
+// MIDDLEWARES
+// --------------------------------------------------
 app.use(cors());
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
+// --------------------------------------------------
+// VERIFICAR VARIABLES
 // --------------------------------------------------
 console.log("Correo sistema:", process.env.CORREO_SISTEMA);
 console.log("Pass correo existe?:", !!process.env.PASS_CORREO);
-
-// --------------------------------------------------
-// PASSWORD + QR
-// --------------------------------------------------
-function generarPassword(len = 6) {
-  const c = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
-  let o = "";
-  for (let i = 0; i < len; i++)
-    o += c.charAt(Math.floor(Math.random() * c.length));
-  return o;
-}
-
-async function generarQR(data) {
-  const pass = generarPassword();
-
-  const contenido = [
-    `CUI: ${data.cui}`,
-    `Nombres: ${data.nombres}`,
-    `Apellidos: ${data.apellidos}`,
-    `Correo: ${data.correo}`,
-    `Teléfono: ${data.telefono || "-"}`,
-    `Dirección: ${data.direccion || "-"}`,
-    `Sexo: ${data.sexo || "-"}`,
-    `Turno: ${data.nota || "-"}`,
-    `Contraseña: ${pass}`
-  ].join("\n");
-
-  const qrBase64 = await QRCode.toDataURL(contenido, { width: 400 });
-
-  return { qrBase64, pass, contenido };
-}
 
 // --------------------------------------------------
 // CORREO
@@ -70,6 +45,8 @@ transporter.verify()
   .then(() => console.log("✅ Servidor de correo listo"))
   .catch(err => console.log("❌ Error correo:", err.message));
 
+// --------------------------------------------------
+// SERVIR FRONTEND
 // --------------------------------------------------
 app.use(express.static(path.join(__dirname, "public")));
 app.get("/", (req, res) => {
@@ -94,89 +71,97 @@ const db = mysql.createPool({
 setInterval(() => db.query("SELECT 1"), 30000);
 
 // --------------------------------------------------
-// GET
+// GET DEVOTO
 // --------------------------------------------------
 app.get("/api/devotos/:cui", (req, res) => {
+
   const { cui } = req.params;
+
   db.query("SELECT * FROM devotos WHERE cui = ?", [cui], (err, results) => {
-    if (err) return res.status(500).json({ error: "Error en la consulta" });
-    if (results.length === 0) return res.status(404).json({ message: "No encontrado" });
+
+    if (err) {
+      console.log("ERROR GET:", err);
+      return res.status(500).json({ error: "Error en la consulta" });
+    }
+
+    if (results.length === 0)
+      return res.status(404).json({ message: "No encontrado" });
+
     res.json(results[0]);
   });
 });
 
 // --------------------------------------------------
-// POST
+// POST DEVOTO (ENVÍA PDF)
 // --------------------------------------------------
-app.post("/api/devotos", async (req, res) => {
-
-  const { cui, nombres, apellidos, telefono, correo, direccion, fn, nota, sexo } = req.body;
-
-  // normalizar sexo para ENUM MySQL
-  let sexoDB = null;
-  if (sexo) {
-    const s = sexo.toLowerCase();
-    if (s.startsWith("h")) sexoDB = "Hombre";
-    else if (s.startsWith("m") || s.startsWith("f")) sexoDB = "Mujer";
-  }
+app.post("/api/devotos", upload.single("pdf"), async (req, res) => {
 
   try {
 
-    const qrData = await generarQR(req.body);
+    if (!req.file || !req.body.datos)
+      return res.status(400).json({ error: "Datos incompletos" });
 
-    // verificar existencia
-    const [rows] = await db.promise().query(
-      "SELECT cui FROM devotos WHERE cui=?",
-      [cui]
+    const datos = JSON.parse(req.body.datos);
+    const pdfBuffer = req.file.buffer;
+
+    // ---- GUARDAR EN BD ----
+    await db.promise().query(
+      `INSERT INTO devotos (cui, nombres, apellidos, telefono, correo, direccion, fn, nota, sexo)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+       ON DUPLICATE KEY UPDATE
+       nombres=VALUES(nombres),
+       apellidos=VALUES(apellidos),
+       telefono=VALUES(telefono),
+       correo=VALUES(correo),
+       direccion=VALUES(direccion),
+       fn=VALUES(fn),
+       nota=VALUES(nota),
+       sexo=VALUES(sexo)`,
+      [
+        datos.cui,
+        datos.nombres,
+        datos.apellidos,
+        datos.telefono,
+        datos.correo,
+        datos.direccion,
+        datos.fn,
+        datos.nota,
+        datos.sexo
+      ]
     );
 
-    if (rows.length > 0) {
+    // RESPONDER RÁPIDO (Render feliz)
+    res.json({ ok: true });
 
-      // UPDATE
-      await db.promise().query(
-        `UPDATE devotos 
-         SET nombres=?, apellidos=?, telefono=?, correo=?, direccion=?, fn=?, nota=?, sexo=? 
-         WHERE cui=?`,
-        [nombres, apellidos, telefono, correo, direccion, fn, nota, sexoDB, cui]
-      );
-
-    } else {
-
-      // INSERT (ARREGLADO)
-      await db.promise().query(
-        `INSERT INTO devotos (cui, nombres, apellidos, telefono, correo, direccion, fn, nota, sexo)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [cui, nombres, apellidos, telefono, correo, direccion, fn, nota, sexoDB]
-      );
-    }
-
-    // enviar correo (no rompe el flujo si falla)
+    // ---- ENVIAR CORREO EN SEGUNDO PLANO ----
     transporter.sendMail({
       from: `"Hermandad Virgen de la Soledad" <${process.env.CORREO_SISTEMA}>`,
-      to: correo,
+      to: datos.correo,
       subject: "Comprobante de Registro",
-      html: `
-        <h2>Registro completado</h2>
-        <p><b>${nombres} ${apellidos}</b></p>
-        <p>CUI: ${cui}</p>
-        <p>Contraseña: <b>${qrData.pass}</b></p>
-        <p>Presente este código:</p>
-        <img src="${qrData.qrBase64}" width="250"/>
-      `
-    }).catch(e => console.log("⚠️ Correo no enviado:", e.message));
+      text: `Hola ${datos.nombres} ${datos.apellidos},
 
-    // RESPUESTA
-    res.json({
-      message: "Registro guardado correctamente",
-      qr: qrData.qrBase64,
-      password: qrData.pass,
-      contenidoQR: qrData.contenido
-    });
+Su registro fue realizado correctamente.
 
-  } catch (error) {
-    console.log("ERROR REAL:", error);
-    res.status(500).json({ error: error.message });
+Adjunto encontrará su comprobante oficial.
+Preséntelo el día de la procesión.
+
+Dios le bendiga.`,
+      attachments: [
+        {
+          filename: `comprobante_${datos.cui}.pdf`,
+          content: pdfBuffer,
+          contentType: "application/pdf"
+        }
+      ]
+    })
+    .then(() => console.log("📧 Correo enviado a:", datos.correo))
+    .catch(e => console.log("⚠️ Error enviando correo:", e.message));
+
+  } catch (err) {
+    console.log("ERROR POST:", err);
+    res.status(500).json({ error: "No se pudo guardar en la base de datos" });
   }
+
 });
 
 // --------------------------------------------------

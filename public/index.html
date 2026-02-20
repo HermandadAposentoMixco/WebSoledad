@@ -1,10 +1,13 @@
+
 <!-- Cambiado principal con backend de Render y listo para nota/turno -->
-<!DOCTYPE >
+<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Confirmación - Generador Comprobante con QR</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
@@ -90,7 +93,7 @@
           </div>
           <label><input type="checkbox" id="noGuate"> <span class="muted">No soy de Guatemala</span></label>
           <label>Documento de Identificación *</label>
-          <input id="cuiInput" type="tel" inputmode="numeric" pattern="[0-9]*" maxlength="13">
+          <input id="cuiInput" type="text" placeholder="Ej: 3059567870301" inputmode="numeric" maxlength="13">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;">
             <div class="muted">Los campos con * son obligatorios.</div>
             <button id="consultBtn" class="btn">CONSULTAR INFORMACIÓN</button>
@@ -214,7 +217,6 @@
           cuiForm=document.getElementById('cuiForm'), telefonoEl=document.getElementById('telefono'),
           correoEl=document.getElementById('correo'), direccionEl=document.getElementById('direccion'),
           fnEl=document.getElementById('fn'), notaEl=document.getElementById('nota');
-    const btnPDF = document.getElementById('btnPDF');
     const previewQr=document.getElementById('previewQr'), previewText=document.getElementById('previewText'), downloadQrBtn=document.getElementById('downloadQrBtn');
     const tdCui=document.getElementById('tdCui'), tdNombres=document.getElementById('tdNombres'), tdApellidos=document.getElementById('tdApellidos'),
           tdFn=document.getElementById('tdFn'), tdTel=document.getElementById('tdTel'), tdCorreo=document.getElementById('tdCorreo'), tdDir=document.getElementById('tdDir'),
@@ -261,14 +263,10 @@
     });
 
     // Generar comprobante
-    devotoForm.addEventListener('submit', async e=>{
+   devotoForm.addEventListener('submit', async e=>{
   e.preventDefault();
 
-  const btn = devotoForm.querySelector('button[type="submit"]');
-  btn.disabled = true;
-  btn.textContent = "Generando...";
-
-  const data = {
+  const datos = {
     cui: onlyDigits(cuiForm.value),
     nombres: nombresEl.value.trim(),
     apellidos: apellidosEl.value.trim(),
@@ -280,77 +278,120 @@
     sexo: (document.querySelector('input[name="sexo"]:checked')||{}).value||''
   };
 
-
-if(!data.nombres||!data.apellidos||!data.cui||!data.correo){
-  alert('Complete los campos obligatorios.');
-  btn.disabled = false;
-  btn.textContent = "Generar comprobante (PDF)";
-  return;
-}
-  try {
-    const res = await fetch(`${API_URL}/devotos`, {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify(data)
-    });
-
-    const r = await res.json();
-    if(!res.ok) throw new Error();
-
-    // QR oficial
-    qrComprobante.src = r.qr;
-    previewQr.src = r.qr;
-    previewText.textContent = r.contenidoQR;
-    contraseñaPdf.textContent = r.password;
-
-  } catch {
-  alert('Error al guardar en la base de datos.');
-  btn.disabled = false;
-  btn.textContent = "Generar comprobante (PDF)";
-  return;
-}
-
-  // Mostrar datos
-  tdCui.textContent = data.cui;
-  tdNombres.textContent = data.nombres;
-  tdApellidos.textContent = data.apellidos;
-  tdFn.textContent = data.fn || '-';
-  tdTel.textContent = data.telefono || '-';
-  tdCorreo.textContent = data.correo || '-';
-  tdDir.textContent = data.direccion || '-';
-  tdNota.textContent = data.nota || '-';
-  cuiGrande.textContent = data.cui;
-  fechaComprobante.textContent = new Date().toLocaleDateString();
-comprobanteContainer.style.display = 'block';
-
-btn.disabled = false;
-btn.textContent = "Generar comprobante (PDF)";
-});
-
-
-btnPDF.addEventListener("click", async () => {
-
-  if(!qrComprobante.src){
-    alert("Primero debe generar el comprobante.");
+  if(!datos.nombres||!datos.apellidos||!datos.cui||!datos.correo){
+    alert('Complete los campos obligatorios.');
     return;
   }
 
-  function esperarImagen(img){
-  return new Promise((resolve)=>{
-    if(!img) return resolve();
-    if(img.complete && img.naturalHeight !== 0) return resolve();
-    img.onload = resolve;
-    img.onerror = resolve;
+  // ---------- GENERAR PASSWORD ----------
+  const pass = randomPassword(6);
+  contraseñaPdf.textContent = pass;
+
+  // ---------- GENERAR QR ----------
+  const qrContent = [
+    `CUI: ${datos.cui}`,
+    `Nombres: ${datos.nombres}`,
+    `Apellidos: ${datos.apellidos}`,
+    `Correo: ${datos.correo}`,
+    `Teléfono: ${datos.telefono||'-'}`,
+    `Dirección: ${datos.direccion||'-'}`,
+    `Sexo: ${datos.sexo||'-'}`,
+    `Turno: ${datos.nota||'-'}`,
+    `Contraseña: ${pass}`
+  ].join('\n');
+
+  const qrDataUrl = await QRCode.toDataURL(qrContent,{width:400,margin:1});
+  qrComprobante.src = qrDataUrl;
+  previewQr.src = qrDataUrl;
+  previewText.textContent = qrContent;
+
+  // ---------- LLENAR COMPROBANTE ----------
+  tdCui.textContent = datos.cui;
+  tdNombres.textContent = datos.nombres;
+  tdApellidos.textContent = datos.apellidos;
+  tdFn.textContent = datos.fn || '-';
+  tdTel.textContent = datos.telefono || '-';
+  tdCorreo.textContent = datos.correo || '-';
+  tdDir.textContent = datos.direccion || '-';
+  tdNota.textContent = datos.nota || '-';
+  cuiGrande.textContent = datos.cui;
+  fechaComprobante.textContent = new Date().toLocaleDateString();
+
+  comprobanteContainer.style.display = 'block';
+
+  // ---------- GENERAR PDF EN MEMORIA ----------
+// ---------- GENERAR PDF EN MEMORIA ----------
+const el = document.getElementById('comprobante');
+
+const canvas = await html2canvas(el,{scale:2,useCORS:true});
+const imgData = canvas.toDataURL('image/jpeg',0.9);
+
+const pdf = new jsPDF({unit:'mm', format:'a4'});
+const pdfW = pdf.internal.pageSize.getWidth();
+const pdfH = pdf.internal.pageSize.getHeight();
+const imgProps = pdf.getImageProperties(imgData);
+
+let imgWidth = pdfW;
+let imgHeight = (imgProps.height * imgWidth) / imgProps.width;
+
+if(imgHeight > pdfH){
+  const scale = pdfH / imgHeight;
+  imgWidth *= scale;
+  imgHeight *= scale;
+}
+ 
+ pdf.addImage(imgData,'PNG',0,0,imgWidth,imgHeight);
+
+// =============================
+// CONVERTIR PDF A BASE64
+// =============================
+const pdfBlob = pdf.output("blob");
+
+const pdfBase64 = await new Promise((resolve,reject)=>{
+  const reader = new FileReader();
+  reader.readAsDataURL(pdfBlob);
+  reader.onload = () => resolve(reader.result);
+  reader.onerror = reject;
+});
+
+// =============================
+// ENVIAR AL BACKEND (FORMDATA REAL)
+// =============================
+try {
+
+  const formData = new FormData();
+
+  formData.append("datos", JSON.stringify(datos));
+  formData.append("pdf", pdfBlob, `comprobante_${datos.cui}.pdf`);
+
+  const res = await fetch(`${API_URL}/devotos`, {
+    method: "POST",
+    body: formData
   });
+
+  const r = await res.json();
+
+  if(!res.ok){
+    console.error(r);
+    throw new Error("Error servidor");
+  }
+
+  alert("Registro guardado y comprobante enviado al correo ✔");
+
+} catch(err){
+  console.error(err);
+  alert("No se pudo enviar al servidor.");
 }
 
-  // Esperar a que cargue el QR
-  await esperarImagen(qrComprobante);
-  await esperarImagen(previewQr);
+});
 
+// =============================
+// BOTÓN DESCARGAR PDF
+// =============================
+document.getElementById("btnPDF").addEventListener("click", async ()=>{
   const el = document.getElementById('comprobante');
   const canvas = await html2canvas(el,{scale:2,useCORS:true});
-  const imgData = canvas.toDataURL('image/png');
+  const imgData = canvas.toDataURL('image/jpeg',0.9);
 
   const pdf = new jsPDF({unit:'mm', format:'a4'});
   const pdfW = pdf.internal.pageSize.getWidth();
@@ -365,28 +406,21 @@ btnPDF.addEventListener("click", async () => {
     imgWidth *= scale;
     imgHeight *= scale;
   }
-let position = 0;
-let remaining = imgHeight;
 
-while (remaining > 0) {
-  pdf.addImage(imgData,'PNG',0,position,imgWidth,imgHeight);
-  remaining -= pdfH;
-  position -= pdfH;
-
-  if (remaining > 0) pdf.addPage();
-}
-
-pdf.save(`comprobanteDevoto_${cuiForm.value}.pdf`);
+  pdf.addImage(imgData,'JPEG',0,0,imgWidth,imgHeight);
+  pdf.save(`comprobante_${cuiForm.value}.pdf`);
 });
 
-downloadQrBtn.addEventListener('click',()=>{
-  if(!previewQr.src){ alert('No hay QR generado aún.'); return; }
-  const a=document.createElement('a');
-  a.href=previewQr.src;
-  a.download=`QR_${cuiForm.value}.png`;
+// =============================
+// DESCARGAR QR
+// =============================
+downloadQrBtn.addEventListener("click", ()=>{
+  if(!previewQr.src) return alert("Primero genere el comprobante");
+  const a = document.createElement("a");
+  a.href = previewQr.src;
+  a.download = `QR_${cuiForm.value}.png`;
   a.click();
 });
   </script>
 </body>
 </html>
-
