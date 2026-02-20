@@ -21,13 +21,11 @@ app.use(cors());
 app.use(express.json());
 
 // --------------------------------------------------
-// VERIFICAR VARIABLES
-// --------------------------------------------------
 console.log("Correo sistema:", process.env.CORREO_SISTEMA);
 console.log("Pass correo existe?:", !!process.env.PASS_CORREO);
 
 // --------------------------------------------------
-// GENERAR PASSWORD + QR
+// PASSWORD + QR
 // --------------------------------------------------
 function generarPassword(len = 6) {
   const c = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
@@ -58,7 +56,7 @@ async function generarQR(data) {
 }
 
 // --------------------------------------------------
-// CONFIG CORREO (AHORA SÍ EXISTE)
+// CORREO
 // --------------------------------------------------
 const transporter = nodemailer.createTransport({
   service: "gmail",
@@ -73,15 +71,13 @@ transporter.verify()
   .catch(err => console.log("❌ Error correo:", err.message));
 
 // --------------------------------------------------
-// SERVIR FRONTEND
-// --------------------------------------------------
 app.use(express.static(path.join(__dirname, "public")));
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
 // --------------------------------------------------
-// MYSQL POOL
+// MYSQL
 // --------------------------------------------------
 const db = mysql.createPool({
   host: "bc1f5keqcm2p0h7qnkw6-mysql.services.clever-cloud.com",
@@ -94,13 +90,11 @@ const db = mysql.createPool({
   ssl: { rejectUnauthorized: false }
 });
 
-// mantener viva la conexión
-setInterval(() => {
-  db.query("SELECT 1");
-}, 30000);
+// mantener viva conexión
+setInterval(() => db.query("SELECT 1"), 30000);
 
 // --------------------------------------------------
-// RUTAS
+// GET
 // --------------------------------------------------
 app.get("/api/devotos/:cui", (req, res) => {
   const { cui } = req.params;
@@ -111,23 +105,26 @@ app.get("/api/devotos/:cui", (req, res) => {
   });
 });
 
+// --------------------------------------------------
+// POST
+// --------------------------------------------------
 app.post("/api/devotos", async (req, res) => {
 
   const { cui, nombres, apellidos, telefono, correo, direccion, fn, nota, sexo } = req.body;
 
-  // NORMALIZAR SEXO
+  // normalizar sexo para ENUM MySQL
   let sexoDB = null;
   if (sexo) {
     const s = sexo.toLowerCase();
-    if (s.startsWith("h") || s.startsWith("m")) sexoDB = "Hombre";
-    if (s.startsWith("f")) sexoDB = "Mujer";
+    if (s.startsWith("h")) sexoDB = "Hombre";
+    else if (s.startsWith("m") || s.startsWith("f")) sexoDB = "Mujer";
   }
 
   try {
 
     const qrData = await generarQR(req.body);
 
-    // EXISTE?
+    // verificar existencia
     const [rows] = await db.promise().query(
       "SELECT cui FROM devotos WHERE cui=?",
       [cui]
@@ -135,6 +132,7 @@ app.post("/api/devotos", async (req, res) => {
 
     if (rows.length > 0) {
 
+      // UPDATE
       await db.promise().query(
         `UPDATE devotos 
          SET nombres=?, apellidos=?, telefono=?, correo=?, direccion=?, fn=?, nota=?, sexo=? 
@@ -144,14 +142,16 @@ app.post("/api/devotos", async (req, res) => {
 
     } else {
 
+      // INSERT (ARREGLADO)
       await db.promise().query(
-  `UPDATE devotos SET nombres=?, apellidos=?, telefono=?, correo=?, direccion=?, fn=?, nota=?, sexo=? WHERE cui=?`,
-  [nombres, apellidos, telefono, correo, direccion, fn, nota, sexoDB, cui]
-);
+        `INSERT INTO devotos (cui, nombres, apellidos, telefono, correo, direccion, fn, nota, sexo)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [cui, nombres, apellidos, telefono, correo, direccion, fn, nota, sexoDB]
+      );
     }
 
-    // ENVIAR CORREO (NO ROMPE EL REGISTRO SI FALLA)
-    const transporter = sendMail.createTransport({
+    // enviar correo (no rompe el flujo si falla)
+    transporter.sendMail({
       from: `"Hermandad Virgen de la Soledad" <${process.env.CORREO_SISTEMA}>`,
       to: correo,
       subject: "Comprobante de Registro",
@@ -165,6 +165,7 @@ app.post("/api/devotos", async (req, res) => {
       `
     }).catch(e => console.log("⚠️ Correo no enviado:", e.message));
 
+    // RESPUESTA
     res.json({
       message: "Registro guardado correctamente",
       qr: qrData.qrBase64,
@@ -173,8 +174,8 @@ app.post("/api/devotos", async (req, res) => {
     });
 
   } catch (error) {
-    console.log("ERROR GENERAL:", error);
-    res.status(500).json({ error: "Error al guardar en la base de datos." });
+    console.log("ERROR REAL:", error);
+    res.status(500).json({ error: error.message });
   }
 });
 
