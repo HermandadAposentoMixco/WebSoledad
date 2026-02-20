@@ -145,14 +145,13 @@ app.post("/api/devotos", async (req, res) => {
     } else {
 
       await db.promise().query(
-        `INSERT INTO devotos (cui, nombres, apellidos, telefono, correo, direccion, fn, nota, sexo)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [cui, nombres, apellidos, telefono, correo, direccion, fn, nota, sexoDB]
-      );
+  `UPDATE devotos SET nombres=?, apellidos=?, telefono=?, correo=?, direccion=?, fn=?, nota=?, sexo=? WHERE cui=?`,
+  [nombres, apellidos, telefono, correo, direccion, fn, nota, sexoDB, cui]
+);
     }
 
     // ENVIAR CORREO (NO ROMPE EL REGISTRO SI FALLA)
-    transporter.sendMail({
+    const transporter = sendMail.createTransport({
       from: `"Hermandad Virgen de la Soledad" <${process.env.CORREO_SISTEMA}>`,
       to: correo,
       subject: "Comprobante de Registro",
