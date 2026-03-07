@@ -184,6 +184,18 @@ app.get("/api/all", (req, res) => {
   );
 
 });
+app.get("/api/buscar", (req,res)=>{
+  const q = `%${req.query.q}%`;
+
+  db.query(
+    "SELECT * FROM devotos WHERE nombres LIKE ? OR apellidos LIKE ? OR cui LIKE ?",
+    [q,q,q],
+    (err,results)=>{
+      if(err) return res.status(500).json(err);
+      res.json(results);
+    }
+  );
+});
 
 // --------------------------------------------------
 app.listen(PORT, () => {
