@@ -170,7 +170,7 @@ Preséntelo el día de la venta de turnos.
 app.get("/api/all", (req, res) => {
 
   db.query(
-    "SELECT id, cui, nombres, apellidos, telefono, correo, direccion, fn, sexo FROM devotos ORDER BY id DESC",
+    "SELECT id, cui, nombres, apellidos, telefono, correo, direccion, nota, fn, sexo FROM devotos ORDER BY id DESC",
     (err, results) => {
 
       if (err) {
