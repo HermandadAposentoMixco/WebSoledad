@@ -287,6 +287,8 @@
   const pass = randomPassword(6);
   contraseñaPdf.textContent = pass;
 
+  datos.password = pass;
+
   // ---------- GENERAR QR ----------
   const qrContent = [
     `CUI: ${datos.cui}`,
@@ -341,18 +343,6 @@ if(imgHeight > pdfH){
 }
  
  pdf.addImage(imgData,'PNG',0,0,imgWidth,imgHeight);
-
-// =============================
-// CONVERTIR PDF A BASE64
-// =============================
-const pdfBlob = pdf.output("blob");
-
-const pdfBase64 = await new Promise((resolve,reject)=>{
-  const reader = new FileReader();
-  reader.readAsDataURL(pdfBlob);
-  reader.onload = () => resolve(reader.result);
-  reader.onerror = reject;
-});
 
 // =============================
 // ENVIAR AL BACKEND (FORMDATA REAL)

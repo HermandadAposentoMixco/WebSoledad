@@ -60,38 +60,81 @@
   </div>
 
   <script>
-    const API = "https://api.websoledad.org/api";
-    const tbody = document.querySelector("tbody");
-    const buscar = document.getElementById("buscar");
+const API = "https://api.websoledad.org/api";
+const tbody = document.querySelector("tbody");
+const buscar = document.getElementById("buscar");
 
-    async function cargar() {
-      const res = await fetch(`${API}/all`);
-      const data = await res.json();
-      mostrar(data);
+let datosGlobal = [];
+let timer = null;
+
+// =============================
+// CARGAR TODOS LOS REGISTROS
+// =============================
+async function cargar() {
+  try {
+    const res = await fetch(`${API}/all`);
+    const data = await res.json();
+    datosGlobal = data;
+    mostrar(data);
+  } catch (err) {
+    console.error("Error cargando registros", err);
+  }
+}
+
+// =============================
+// MOSTRAR DATOS
+// =============================
+function mostrar(data) {
+  if (!data.length) {
+    tbody.innerHTML = `<tr><td colspan="7">No hay resultados</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = data.map(d => `
+    <tr>
+      <td data-label="CUI">${d.cui}</td>
+      <td data-label="Nombres">${d.nombres}</td>
+      <td data-label="Apellidos">${d.apellidos}</td>
+      <td data-label="Teléfono">${d.telefono || '-'}</td>
+      <td data-label="Correo">${d.correo}</td>
+      <td data-label="Dirección">${d.direccion || '-'}</td>
+      <td data-label="Turno">${d.nota || '-'}</td>
+    </tr>
+  `).join('');
+}
+
+// =============================
+// BUSCADOR LOCAL (MUCHO MÁS RÁPIDO)
+// =============================
+buscar.addEventListener("input", (e) => {
+
+  clearTimeout(timer);
+
+  timer = setTimeout(() => {
+
+    const q = e.target.value.toLowerCase().trim();
+
+    if (!q) {
+      mostrar(datosGlobal);
+      return;
     }
 
-    function mostrar(data) {
-      tbody.innerHTML = data.map(d => `
-        <tr>
-          <td data-label="CUI">${d.cui}</td>
-          <td data-label="Nombres">${d.nombres}</td>
-          <td data-label="Apellidos">${d.apellidos}</td>
-          <td data-label="Teléfono">${d.telefono || '-'}</td>
-          <td data-label="Correo">${d.correo}</td>
-          <td data-label="Dirección">${d.direccion || '-'}</td>
-          <td data-label="Turno">${d.nota || '-'}</td>
-        </tr>
-      `).join('');
-    }
+    const filtrados = datosGlobal.filter(d =>
+      (d.nombres || "").toLowerCase().includes(q) ||
+      (d.apellidos || "").toLowerCase().includes(q) ||
+      (d.telefono || "").includes(q) ||
+      (d.nota || "").toLowerCase().includes(q) ||
+      (d.cui || "").includes(q)
+    );
 
-    buscar.addEventListener("input", async e => {
-      const q = e.target.value.trim();
-      const res = await fetch(`${API}/search?q=${q}`);
-      const data = await res.json();
-      mostrar(data);
-    });
+    mostrar(filtrados);
 
-    cargar();
-  </script>
+  }, 300);
+
+});
+
+// =============================
+cargar();
+</script>
 </body>
 </html>
