@@ -138,14 +138,14 @@ app.post("/api/devotos", upload.single("pdf"), async (req, res) => {
       from: `"Hermandad Virgen de la Soledad" <${process.env.CORREO_SISTEMA}>`,
       to: datos.correo,
       subject: "Comprobante de Registro",
-      text: `Hola ${datos.nombres} ${datos.apellidos},
+      text: `Hermano(a) ${datos.nombres} ${datos.apellidos},
 
 Su registro fue realizado correctamente.
 
 Adjunto encontrará su comprobante oficial.
-Preséntelo el día de la procesión.
+Preséntelo el día de la venta de turnos.
 
-Dios le bendiga.`,
+500 Años de conocer a Jesús.`,
       attachments: [
         {
           filename: `comprobante_${datos.cui}.pdf`,
