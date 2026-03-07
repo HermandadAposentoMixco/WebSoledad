@@ -165,6 +165,27 @@ Preséntelo el día de la venta de turnos.
 });
 
 // --------------------------------------------------
+// GET TODOS LOS DEVOTOS (ADMIN)
+// --------------------------------------------------
+app.get("/api/all", (req, res) => {
+
+  db.query(
+    "SELECT id, cui, nombres, apellidos, telefono, correo, direccion, fn, sexo FROM devotos ORDER BY id DESC",
+    (err, results) => {
+
+      if (err) {
+        console.log("ERROR GET ALL:", err);
+        return res.status(500).json({ error: "Error en la consulta" });
+      }
+
+      res.json(results);
+
+    }
+  );
+
+});
+
+// --------------------------------------------------
 app.listen(PORT, () => {
   console.log(`🚀 Servidor escuchando en puerto ${PORT}`);
 });
