@@ -92,6 +92,24 @@ app.get("/api/devotos/:cui", (req, res) => {
 });
 
 // --------------------------------------------------
+// GET TODOS LOS DEVOTOS
+// --------------------------------------------------
+app.get("/api/devotos", (req, res) => {
+
+  db.query("SELECT * FROM devotos ORDER BY id DESC", (err, results) => {
+
+    if (err) {
+      console.log("ERROR GET ALL:", err);
+      return res.status(500).json({ error: "Error en la consulta" });
+    }
+
+    res.json(results);
+
+  });
+
+});
+
+// --------------------------------------------------
 // POST DEVOTO (ENVÍA PDF)
 // --------------------------------------------------
 app.post("/api/devotos", upload.single("pdf"), async (req, res) => {
@@ -164,38 +182,7 @@ Preséntelo el día de la venta de turnos.
 
 });
 
-// --------------------------------------------------
-// GET TODOS LOS DEVOTOS (ADMIN)
-// --------------------------------------------------
-app.get("/api/all", (req, res) => {
 
-  db.query(
-    "SELECT id, cui, nombres, apellidos, telefono, correo, direccion, nota, fn, sexo FROM devotos ORDER BY id DESC",
-    (err, results) => {
-
-      if (err) {
-        console.log(err)
-        return res.status(500).json({ error: "Error en la consulta" })
-      }
-
-      res.json(results)
-
-    }
-  )
-
-})
-app.get("/api/buscar", (req,res)=>{
-  const q = `%${req.query.q}%`;
-
-  db.query(
-    "SELECT * FROM devotos WHERE nombres LIKE ? OR apellidos LIKE ? OR cui LIKE ?",
-    [q,q,q],
-    (err,results)=>{
-      if(err) return res.status(500).json(err);
-      res.json(results);
-    }
-  );
-});
 
 // --------------------------------------------------
 app.listen(PORT, () => {

@@ -1,140 +1,145 @@
-<!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Panel de Registros - Hermandad</title>
-  <style>
-    body { font-family: Arial, sans-serif; margin: 10px; background: #f4f4f4; }
-    h1 { text-align: center; font-size: 1.5em; margin-bottom: 10px; }
-    .center { text-align: center; margin-bottom: 10px; }
-    input { padding: 8px; width: 100%; max-width: 400px; box-sizing: border-box; }
-    
-    table { width: 100%; border-collapse: collapse; background: white; }
-    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 0.9em; }
-    tr:nth-child(even) { background: #f9f9f9; }
+<meta charset="UTF-8">
+<title>Registros Devotos</title>
 
-    /* Scroll horizontal para pantallas pequeñas */
-    .table-container {
-      overflow-x: auto;
-    }
+<style>
 
-    /* Diseño tipo tarjeta en móviles */
-    @media (max-width: 600px) {
-      table, thead, tbody, th, td, tr { display: block; }
-      thead { display: none; }
-      tr { margin-bottom: 10px; background: white; padding: 10px; border-radius: 5px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-      td { border: none; padding: 5px 0; text-align: right; position: relative; }
-      td::before {
-        content: attr(data-label);
-        position: absolute;
-        left: 0;
-        width: 50%;
-        padding-left: 10px;
-        font-weight: bold;
-        text-align: left;
-      }
-    }
-  </style>
+body{
+    font-family: Arial;
+    background:#f5f5f5;
+    padding:40px;
+}
+
+h1{
+    text-align:center;
+}
+
+input{
+    width:300px;
+    padding:10px;
+    margin-bottom:20px;
+    font-size:16px;
+}
+
+table{
+    width:100%;
+    border-collapse:collapse;
+    background:white;
+}
+
+th{
+    background:#111;
+    color:white;
+    padding:10px;
+}
+
+td{
+    padding:8px;
+    border-bottom:1px solid #ddd;
+    font-size:14px;
+}
+
+tr:hover{
+    background:#f0f0f0;
+}
+
+.container{
+    max-width:1200px;
+    margin:auto;
+}
+
+</style>
 </head>
+
 <body>
-  <h1>Panel de Registros - Hermandad Virgen de la Soledad</h1>
-  <div class="center">
-    <input id="buscar" type="text" placeholder="Buscar por nombre, teléfono o turno...">
-  </div>
-  <div class="table-container">
-    <table id="tabla">
-      <thead>
+
+<div class="container">
+
+<h1>Registros de Devotos</h1>
+
+<input type="text" id="buscar" placeholder="Buscar por nombre, CUI o teléfono">
+
+<table>
+
+<thead>
+<tr>
+<th>ID</th>
+<th>CUI</th>
+<th>Nombres</th>
+<th>Apellidos</th>
+<th>Teléfono</th>
+<th>Correo</th>
+<th>Dirección</th>
+<th>Fecha N.</th>
+<th>Nota</th>
+<th>Genero</th>
+</tr>
+</thead>
+
+<tbody id="tabla"></tbody>
+
+</table>
+
+</div>
+
+<script>
+
+let registros = []
+
+async function cargarRegistros(){
+
+    const res = await fetch("/api/devotos")
+    registros = await res.json()
+
+    mostrar(registros)
+
+}
+
+function mostrar(data){
+
+    const tabla = document.getElementById("tabla")
+    tabla.innerHTML = ""
+
+    data.forEach(devoto => {
+
+        tabla.innerHTML += `
         <tr>
-          <th>CUI</th>
-          <th>Nombres</th>
-          <th>Apellidos</th>
-          <th>Teléfono</th>
-          <th>Correo</th>
-          <th>Dirección</th>
-          <th>Turno</th>
+        <td>${devoto.id}</td>
+        <td>${devoto.cui}</td>
+        <td>${devoto.nombres}</td>
+        <td>${devoto.apellidos}</td>
+        <td>${devoto.telefono}</td>
+        <td>${devoto.correo}</td>
+        <td>${devoto.direccion}</td>
+        <td>${devoto.fn}</td>
+        <td>${devoto.nota}</td>
+        <td>${devoto.sexo}</td>
         </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-  </div>
+        `
+    })
 
-  <script>
-const API = "/api";
-const tbody = document.querySelector("tbody");
-const buscar = document.getElementById("buscar");
-
-let datosGlobal = [];
-let timer = null;
-
-// =============================
-// CARGAR TODOS LOS REGISTROS
-// =============================
-async function cargar() {
-  try {
-    const res = await fetch(`${API}/all`);
-    const data = await res.json();
-    datosGlobal = data;
-    mostrar(data);
-  } catch (err) {
-    console.error("Error cargando registros", err);
-  }
 }
 
-// =============================
-// MOSTRAR DATOS
-// =============================
-function mostrar(data) {
-  if (!data.length) {
-    tbody.innerHTML = `<tr><td colspan="7">No hay resultados</td></tr>`;
-    return;
-  }
+document.getElementById("buscar").addEventListener("keyup", e => {
 
-  tbody.innerHTML = data.map(d => `
-    <tr>
-      <td data-label="CUI">${d.cui}</td>
-      <td data-label="Nombres">${d.nombres}</td>
-      <td data-label="Apellidos">${d.apellidos}</td>
-      <td data-label="Teléfono">${d.telefono || '-'}</td>
-      <td data-label="Correo">${d.correo}</td>
-      <td data-label="Dirección">${d.direccion || '-'}</td>
-      <td data-label="Turno">${d.nota || '-'}</td>
-    </tr>
-  `).join('');
-}
+    const texto = e.target.value.toLowerCase()
 
-// =============================
-// BUSCADOR LOCAL (MUCHO MÁS RÁPIDO)
-// =============================
-buscar.addEventListener("input", (e) => {
+    const filtrado = registros.filter(r => 
+        r.nombres.toLowerCase().includes(texto) ||
+        r.apellidos.toLowerCase().includes(texto) ||
+        r.cui.includes(texto) ||
+        r.telefono.includes(texto)
+    )
 
-  clearTimeout(timer);
+    mostrar(filtrado)
 
-  timer = setTimeout(() => {
+})
 
-    const q = e.target.value.toLowerCase().trim();
+cargarRegistros()
 
-    if (!q) {
-      mostrar(datosGlobal);
-      return;
-    }
-
-    const filtrados = datosGlobal.filter(d =>
-      (d.nombres || "").toLowerCase().includes(q) ||
-      (d.apellidos || "").toLowerCase().includes(q) ||
-      (d.telefono || "").includes(q) ||
-      (d.nota || "").toLowerCase().includes(q) ||
-      (d.cui || "").includes(q)
-    );
-
-    mostrar(filtrados);
-
-  }, 300);
-
-});
-
-// =============================
-cargar();
 </script>
+
 </body>
 </html>
