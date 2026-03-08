@@ -174,16 +174,16 @@ app.get("/api/all", (req, res) => {
     (err, results) => {
 
       if (err) {
-        console.log("ERROR GET ALL:", err);
-        return res.status(500).json({ error: "Error en la consulta" });
+        console.log(err)
+        return res.status(500).json({ error: "Error en la consulta" })
       }
 
-      res.json(results);
+      res.json(results)
 
     }
-  );
+  )
 
-});
+})
 app.get("/api/buscar", (req,res)=>{
   const q = `%${req.query.q}%`;
 
